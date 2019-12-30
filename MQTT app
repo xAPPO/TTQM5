@@ -170,7 +170,7 @@ def vMQTT() {
     dynamicPage(name: "vMQTT", title: "Virtual MQTT Data", nextPage: "discovery") {
         atomicState.vList=["Virtual Acceleration Sensor", "Virtual audioVolume", "Virtual Button", "Virtual Color Temperature Light", "Virtual Contact Sensor", "Virtual Dimmer", "Virtual Fan Controller", "Virtual Garage Door Controller", "Virtual Humidity Sensor", "Virtual Illuminance Sensor", "Virtual Lock", "Virtual Moisture Sensor", "Virtual Motion Sensor", "Virtual Multi Sensor", "Virtual Omni Sensor", "Virtual Presence", "Virtual RGB Light", "Virtual RGBW Light", "Virtual Shade", "Virtual Switch", "Virtual Temperature Sensor", "Virtual Thermostat"  ]
         section {
-          input "resetMappings", "button", title: "Reset Mappings", textColor: "red"
+          //input "resetMappings", "button", title: "Reset Mappings", textColor: "red"
           input "virtuals", "capability.virtual",hideWhenEmpty: true, multiple: true, required: false, title: "<b>Virtual Devices</b>", submitOnChange: false
           input(name: "capability", type: "enum", title: "Device Type",description: null, multiple: false, required: false, submitOnChange: true, options: atomicState.vList)
         }  
