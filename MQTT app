@@ -2470,7 +2470,7 @@ def switched(evt, name=null, type=null, state=null,id=0) {
 		name=evt.displayName
 		state=evt.value
 		xName=evt.name
-		log(" Device is switched ${state}  ${name} ${xName} $evt.id", "ERROR")
+		log(" Device is switched ${state}  ${name} ${xName} $evt.id", "TRACE")
 	}   
 	else 
 	{
@@ -4899,7 +4899,7 @@ def cmdEvent (evt) {  // 'set' command from homie for a Hubitat or manual device
 		matchName=normName
 			 }
 		else matchName=atomicState.nameMap[normName]
-        log ("${data.cmd} received ${data.state}","TRACE")
+        log ("${data.cmd} received ${data.state}","DEBUG")
     if (matchName=="hub"){
         if (data.cmd=="mode") {
             
@@ -5021,9 +5021,9 @@ def cmdEvent (evt) {  // 'set' command from homie for a Hubitat or manual device
 			}
 		}
 // TODO Think this can be ignore FTTB as it is a near duplicate in terms of lookup	
-		MQTTRGB = (settings?.colourT)
-    	//log ("ColourT Lookup for  "+  evt.value + " is " + matchName + " [" + atomicState.nameMap[index] +"] ","TRACE")
-		MQTTRGB.each {   // This is awful - looping through - do it the other way
+		MQTTRGBT = (settings?.colourT)
+    	log ("ColourT Lookup for  "+  evt.value + " is " + matchName + " [" + atomicState.nameMap[index] +"] ","TRACE")
+		MQTTRGBT.each {   // This is awful - looping through - do it the other way
 		if (it.displayName==matchName){
 			// TODO combine this below as one method for all
 				log ("Surmising required state [" +data.state+"] for " + evt.value,"DEBUG")
