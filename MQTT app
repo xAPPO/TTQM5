@@ -64,15 +64,17 @@ preferences {  // can't use atomicState vars in this section
                 */
                 input "allDevices", "capability.*",hideWhenEmpty: true, multiple: true, required: true, title: "Please enable the first option <b>Toggle All on/off </b> - to select all devices", submitOnChange: false  
             }
+                /*
 			section ("<B>Import these devices from MQTT *** Now deprecated ***<b>",hideable: true, hidden: true){
-/*
+
 				input "adhoc", "capability.telnet", multiple: true, required: false, title: "<b>MQTT virtual devices</b>", submitOnChange: false
                 input "vSwitch", "device.VirtualSwitch", multiple: true, required: false, title: "<b>MQTT Virtual Switches</b>", submitOnChange: false
 			    input "vContact", "device.VirtualContactSensor", multiple: true, required: false, title: "<b>MQTT Virtual Contact Sensors</b>", submitOnChange: false
                 input "vDimmer", "device.VirtualDimmer", multiple: true, required: false, title: "<b>MQTT Virtual Dimmers</b>", submitOnChange: false
                 //input "vAll", "enum", multiple: true, title: "All virtuals" , options: vDimmer + vSwitch + vContact
-*/
+
             }
+*/
 			section ("<b>Publish these device capabilities to MQTT</b>",hideWhenEmpty: true, hideable: true, hidden: true) {
                 input "modes", "bool", title: "Mode changes", required: false
                 input "everything", "capability.*",hideWhenEmpty: true, multiple: true, required: false, title: "<b>Everything (all capabilities/attributes)</b>", submitOnChange: false
@@ -284,7 +286,7 @@ def vMQTT() {
         }
         if (vDev) {
             
-            log.trace ("Selected Device is ${vDev.displayName}  - last was {$atomicState.vDev}")//,"WARN")
+            log ("Selected Device is ${vDev.displayName}  - last was {$atomicState.vDev}","DEBUG")
             
             if (vDev.displayName==atomicState.vDev) newDev=false else newDev=true
             if (newDev) { 
@@ -480,7 +482,7 @@ def vMQTT() {
                         else {
                             defOne=vDev.getDataValue("${atomicState.attList[i]}_Topic")
                             if (defOne != null){
-                                log.trace "Is this a valid topic to use for ID [$i] [$defOne] ?"
+                                log ("Is this a valid topic to use for ID [$i] [$defOne] ?","DEBUG")
                                 if (i==0) vDev.setDeviceNetworkId("MQTT:virtual_" + defOne )
                                 if (i>0) log.warn "Several state topics for $vDev"
                             }
@@ -944,7 +946,7 @@ def initialize() {
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$name',settings?.hubName,1,true)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$mac','BB:AA:DD:AA:55:55',1,true,settings?.minHomie)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$localip','1.2.3.4',1,true,settings?.minHomie)
-		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$implementation/version','alpha5 pre 5a',1,true)
+		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$implementation/version','alpha5 pre 5b',1,true)
         if (modes) currentMode()
 	}
 	mqtt.setStateVar("logLevel",determineLogLevel(settings?.logging ?: "INFO"))
@@ -1185,7 +1187,7 @@ def buildMQTTLookup() {    // allows lookup of the HE device using normalised na
    			log ("    MQTT Switch Device " + item, "TRACE")
 			normName= normalize(item)
 		if (normName!=null) atomicState.nodes += ',' + normName
-            else log.debug "null name on $MQTTSwitches.displayName"
+            else log ("null name on $MQTTSwitches.displayName","DEBUG")
 			// Build a lookup table for normName to full name
 			temp[normName] = item
 	//switched(null, item, MQTTswitches.currentSwitch[0]) // sends an initial status message to MQTT
@@ -1204,7 +1206,7 @@ def buildMQTTLookup() {    // allows lookup of the HE device using normalised na
    			log ("    MQTT Dimmer Device " + item, "TRACE")
 			normName= normalize(item)
 		if (normName!=null) atomicState.nodes += ','+ normName
-            else log.debug "null name on $MQTTdimmers.displayName"
+            else log ( "null name on $MQTTdimmers.displayName", "DEBUG")
 			temp[normName] = item  //TODO check we dont have duplicate names for two devices ??
 	// Maybe here's a good place to setup the HA Discovery info
 	// dimmed(null, item, MQTTdimmers.currentLevel[0])
@@ -1223,7 +1225,7 @@ def buildMQTTLookup() {    // allows lookup of the HE device using normalised na
    			log ("    MQTT Lock Device " + item, "TRACE")
 			normName= normalize(item)
 		if (normName!=null) atomicState.nodes += ','  + normName
-            else log.debug "null name on $MQTTlocks.displayName"
+            else log ("null name on $MQTTlocks.displayName","DEBUG")
 			// Build a lookup table for normName to full name
 			temp[normName] = item
 			atomicState.MQTTLockDevices++
@@ -1234,7 +1236,7 @@ def buildMQTTLookup() {    // allows lookup of the HE device using normalised na
 //Casey>
     
 	
-	MQTTRGB = (settings?.colour)
+    MQTTRGB = (settings?.colour)
 	if (MQTTRGB != null){
 		log ("["+(MQTTRGB.size()) +  "] colour control devicesl enabled for MQTT","TRACE")
 		temp=atomicState.nameMap
@@ -1242,7 +1244,7 @@ def buildMQTTLookup() {    // allows lookup of the HE device using normalised na
    			log ("    MQTT Colour Control Device " + item, "TRACE")
 			normName= normalize(item)
 		if (normName!=null) atomicState.nodes += ','  + normName
-            else log.debug "null name on $MQTTRGB.displayName"
+            else log ( "null name on $MQTTRGB.displayName","DEBUG")
 			temp[normName] = item  //TODO check we dont have duplicate names for two devices ?? BUG  This is very possible here as same device !!
 	// Maybe here's a good place to setup the HA Discovery info
 	// dimmed(null, item, MQTTRGB.currentLevel[0])
@@ -1260,11 +1262,10 @@ def buildMQTTLookup() {    // allows lookup of the HE device using normalised na
    			log ("    MQTT Colour Temp Device " + item, "TRACE")
 			normName= normalize(item)
 		    if (normName!=null) atomicState.nodes += ',' + normName
-            else { 
-            log ("null name on $MQTTRGBT.displayName","DEBUG")
+            else log ("null name on $MQTTRGBT.displayName","DEBUG") 
 			temp[normName] = item  //TODO check we dont have duplicate names for two devices ??
 			atomicState.MQTTRGBt++
-		    }
+
 		atomicState.nameMap = temp
 	    }
     }
@@ -2083,7 +2084,7 @@ def HADiscoveryAdvertise (name, type="none", category="none", id='0', payON="tru
         pID=''
     String ID = "${id}"
     if (ID != '0') {
-        pID= ',"device": {"identifiers": "HE_'+ ID + '","name": "'+name+ '","sw_version":"alpha 5 pre 5a","model":"'+"${atomicState.normHubName}"+'","manufacturer":"Hubitat"}'  // TODO Investigate if this can work
+        pID= ',"device": {"identifiers": "HE_'+ ID + '","name": "'+name+ '","sw_version":"alpha 5 pre 5b","model":"'+"${atomicState.normHubName}"+'","manufacturer":"Hubitat"}'  // TODO Investigate if this can work
     }
 
   
