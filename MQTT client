@@ -2,7 +2,7 @@
 
 metadata {
 	// v0.5
-    definition (name: "MQTT Client", namespace: "ukusa", author: "Kevin Hawkins",importUrl: "https://raw.githubusercontent.com/xAPPO/MQTT-alpha5/master/MQTT%20Broker") {
+    definition (name: "MQTT Client", namespace: "ukusa", author: "Kevin Hawkins",importUrl: "https://raw.githubusercontent.com/Gledholt/TTQM5/master/MQTT%20client") {
         capability "Initialize"
 		capability "Presence Sensor"
         //capability "Indicator"
@@ -71,7 +71,7 @@ def initialize() {
     state.maxComplete=0
 
     
-    version="alpha5 pre 5"
+    version="alpha5 pre 5a"
     if (state.delay==null) state.delay=250 // inter state.maxImmediate event pacing in mS
 
 //    sendEvent (name: "Status", value: "disconnected" , isStateChange: true)
