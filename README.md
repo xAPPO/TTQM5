@@ -4,6 +4,8 @@ I haven't updated the alpha 4 read me yet so this is sparse I will update this s
 
 This is a pre release 5 of alpha 5.   The code and the app user interface is still unfinished in parts but I would like your feedback on any issues you find. Especially red log 'ERROR' messages, java/groovy errors and 'null' errors. Orange log 'warn' are usually not 'problems' as such.  I will send you all an invite to a new Alpha 5 Pre topic on the HE community shortly.
 
+Please keep your eye on this repository for updates - I may not always increment the 'pre' version number so watch the comments and last update time. 
+
 Inparticular I would like you to test discovery from HA (using statestream) or from homie if you have that option.  Also setting up adhoc devices to import from MQTT.  I will post some notes about the latter here shortly.
 
 NB Although HA and OH interoperability is included my main priority for alpha5 is to get HE<>MQTT complete and working well I will then spend some time on expanding HA connectivity (and also OH but I don't use that platform)
