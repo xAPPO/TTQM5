@@ -946,7 +946,7 @@ def initialize() {
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$name',settings?.hubName,1,true)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$mac','BB:AA:DD:AA:55:55',1,true,settings?.minHomie)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$localip','1.2.3.4',1,true,settings?.minHomie)
-		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$implementation/version','alpha5 pre 5b',1,true)
+		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$implementation/version','alpha5 pre 5c',1,true)
         if (modes) currentMode()
 	}
 	mqtt.setStateVar("logLevel",determineLogLevel(settings?.logging ?: "INFO"))
@@ -1348,6 +1348,7 @@ def deviceEventSubscribes() {
 	subscribe(adhoc,"changeState",stateChange)
 	subscribe(adhoc,"changeLevel",levelChange)
     subscribe(adhoc,"changeText",textChange)
+    //subscribe (motionsensors,"motion",sensorDevices)
     subscribe (globVars,"variable",varChange)
     subscribe (gVars,"variable",varChange)
     subscribe (vSwitch,"switch",mqttChange)
@@ -1356,10 +1357,10 @@ def deviceEventSubscribes() {
     subscribe (vDimmer,"switch",mqttChange)
 }
 
-def sensorSubscribes(count) {   // These are report only - they have no commands
+def sensorSubscribes(count) {   // These are report only attributes- they have no commands
     
     attCount=0  // TODO now not local
-    
+        log ("sensorSubscribes","INFO")
         count = registerSpecific (motionsensors,count,'motion','sensorDevices')
         count = registerSpecific (contactsensors,count,'contact','sensorDevices')
         count = registerAll (sensors,count,'sensorDevices')
@@ -1384,6 +1385,7 @@ def sensorSubscribes(count) {   // These are report only - they have no commands
 }
 
 def deviceSubscribes(count) {
+        log ("deviceSubscribes","INFO")
         count = registerAll (colour,count,'colourDevices')
         //count = registerSpecific (colour,count,'ColorControl','colourDevices')
         count = registerAll (colourT,count,'colourDevices')
@@ -1481,24 +1483,26 @@ def everythingSubscribes(count) {
 }
 
 
-def registerSpecific (devList, count, capability, handlerReq='none'){      //registers handlers for a specific device capability 
+def registerSpecific (devList, count, attribute, handlerReq='none'){      //registers handlers for a specific device capability 
      devList.each { sen ->
          //if (capability=='variable') log( "Variable in ${sen} is ${sen.currentVariable}", "INFO")
           sen.capabilities.each { cap ->
-              if ("${cap}" == "${capability}") {
                   cap.attributes.each { attr ->
-                      log ("$sen Specific Registration of $cap $attr", "WARN")
-                      lookupHandler(sen,cap.name,attr.name,handlerReq)
+                      if ("${attr}" == "${attribute}") {
+                          log ("$sen Specific Registration of $cap $attr", "DEBUG")
+                          lookupHandler(sen,cap.name,attr.name,handlerReq)
 // CHECK Re-enabled this lookuphandler call ??
-                      attCount++
+                          attCount++
+                      }
+                      else log ("Attribute $attr not required", "TRACE")   // ERROR 
                   }
-              }
-              else log ("$sen Lost a requested capability $capability $cap", "DEBUG")   // ERROR 
+           //count++ 
           }
-         count++
-     }
-    return (count)
+      count++
+      }
+return (count)
 }
+
 
 
 def registerAll (devList,count,handlerReq='none') {  //registers handlers for every capability and attribute a device has
@@ -1514,8 +1518,7 @@ def registerAll (devList,count,handlerReq='none') {  //registers handlers for ev
             }
             //capCount++
 	    }
-        count++
-            
+        count++        
 	}
     return (count)
 }
@@ -1569,7 +1572,7 @@ def lookupHandler(device,capability,attribute,handlerReq='none')
    case "SecurityKeypad":
        break
    default:
-       log ( "Handling ${device} ${capability} ${attribute} with (default) sensor", "DEBUG")
+       log ( "Handling ${device} ${capability} ${attribute} with (default) sensor", "TRACE")
        handler="sensorDevices"
        break
 
@@ -1597,6 +1600,7 @@ def lookupHandler(device,capability,attribute,handlerReq='none')
 	subscribe(adhoc,"changeLevel",levelChange)
     subscribe(adhoc,"changeText",textChange)
 */
+    log ("Subscribing to $device $attribute $handler","TRACE") // Is attribute inclusion right here ???
     subscribe(device,attribute,handler)
 }
 
@@ -2084,7 +2088,7 @@ def HADiscoveryAdvertise (name, type="none", category="none", id='0', payON="tru
         pID=''
     String ID = "${id}"
     if (ID != '0') {
-        pID= ',"device": {"identifiers": "HE_'+ ID + '","name": "'+name+ '","sw_version":"alpha 5 pre 5b","model":"'+"${atomicState.normHubName}"+'","manufacturer":"Hubitat"}'  // TODO Investigate if this can work
+        pID= ',"device": {"identifiers": "HE_'+ ID + '","name": "'+name+ '","sw_version":"alpha 5 pre 5c","model":"'+"${atomicState.normHubName}"+'","manufacturer":"Hubitat"}'  // TODO Investigate if this can work
     }
 
   
@@ -3358,7 +3362,7 @@ def colourDevices(evt, name=null,type=null, state=null, id=0) {
 		state=evt.value
 		xName=evt.name
 		xType=evt.name  // this is the attribute name
-		log ("Got a colour event " + evt.name + " " + evt.value, "DEBUG") 
+		log ("Got a colour event " + evt.name + " " + evt.value, "INFO") 
 	} 
 	else {
 		xName=name
@@ -3533,8 +3537,7 @@ def colourDevices(evt, name=null,type=null, state=null, id=0) {
 			}
 
 		else log ("Received a new colour event ${xType} from ${name}","TRACE")
-		if (xType=="cMode")
-		{
+        if (xType=="cMode") {
             category='color-mode' // this is a temporary kludge TODO better
             mqtt.publishMsg (sTopic+'/'+category+'/$datatype','enum',1,true,settings?.minHomie)
 			mqtt.publishMsg (sTopic+'/'+category+'/$settable','false',1,true,settings?.minHomie)
@@ -3542,22 +3545,13 @@ def colourDevices(evt, name=null,type=null, state=null, id=0) {
 			HAtype="RGB"
         }
 		
-		if (xType=="RGB"||xType=="RGBT")
-		{
-			category='color' // this is a temporary kludge TODO better
+        if (xType=="RGB"||xType=="RGBT") {
+            category='color' // this is a temporary kludge TODO better
 			log ("Ignoring ${xTYPE} for  ${name.toString()} value ${state.toString()}","WARN")
 			return  // This is overwriting color attribute with #FFFFFF as currentColor() returns that so dont action
 		}
         if (category=="unknown") log ("Need to handle ${xType}  - for ${name.toString()} in RGB colour", "WARN")
-			//mqtt.publishMsg (sTopic+'/$properties',category,1,true)   // limited homie implementation//  TODO BUG multiple properties
-        
-       /*
-			atomicState.Category=category  // Huge risk here that this gets overwritten before update happens BUG check TODO maybe have to check against sTopic
-			pauseExecution(2000)// TODO need to adjust based on experience getTopic takes ~1800
-			mqtt.getTopic (sTopic+'/$properties')   // need to append categories to existing ones
-*/
             addProperty(sTopic,category)
-        
 			mqtt.publishMsg (sTopic+'/$name',name.toString(),1,true) 
 			mqtt.publishMsg (sTopic+'/$type',"RGBT light",1,true,settings?.minHomie)   
 		 	mqtt.publishMsg (sTopic+'/'+category+'/$name',name.toString(),1,true,settings?.minHomie)
@@ -3566,9 +3560,10 @@ def colourDevices(evt, name=null,type=null, state=null, id=0) {
 			if (state=="on") state = "true" 
 			else if (state=='off') state = "false"  // TODO customisable
                // if (category == 'unknown' ) mqtt.publishMsg (sTopic+'/'+category + '/' + xType,state.toString(),1,settings?.homieStatesPersist)
-            else if (category != 'color') {  // hue was overwriting color map - need to check why I even do next publish TODO BUG ?      
-			    mqtt.publishMsg (sTopic+'/'+category,state.toString(),1,settings?.homieStatesPersist)
-                }
+            if ("${category}" == 'color') {  // hue was overwriting color map - need to check why I even do next publish TODO BUG ? 
+                log ("Hue value update blocked","DEBUG")
+                 }
+            else mqtt.publishMsg (sTopic+'/'+category,state.toString(),1,settings?.homieStatesPersist)
             
 		//	mqtt.publishMsg (sTopic+'/color/r',255,1,settings?.homieStatesPersist)  /? TODO What is this for ? Red ? but no g or b ??
 		
@@ -3578,14 +3573,11 @@ def colourDevices(evt, name=null,type=null, state=null, id=0) {
 	    mqtt.publishMsg (sTopic+'/color/$format','hsv',1,true,settings?.minHomie)
 	//	mqtt.publishMsg (sTopic+'/color/hsv','{"h":'+extractInt(atomicState.hue)+',"s":'+extractInt(atomicState.sat)+',"v":'+extractInt(atomicState.lev)+'}',1,settings?.homieStatesPersist)
 	}
-    checkNodes(10, name)
- 
+    checkNodes(10, name) 
 	if (evt==null) {  // this will limit HADiscovery to startup or 'upon request' for devices
 		HADiscoveryAdvertise(name,"light","colour,id")
 	}
-	else if (settings?.HADiscovery) log ("HADiscovery RGB discarded for ${name}","DEBUG")
-	
-	
+	else if (settings?.HADiscovery) log ("HADiscovery RGB discarded for ${name}","DEBUG")	
 }
 def checkNodes(p,name) {
         normName=normalize(name)
