@@ -25,7 +25,7 @@ definition(
 	name: "MQTT",
 	namespace: "ukusa",
 	author: "Kevin Hawkins",
-	importUrl: "https://raw.githubusercontent.com/xAPPO/MQTT/alpha5/MQTT%20app",
+	importUrl: "https://raw.githubusercontent.com/Gledholt/TTQM5/master/MQTT%20app",
 	description: "Links MQTT with HE devices",
 	category: "Intranet Connectivity",
 	iconUrl: "https://s3.amazonaws.com/smartapp-icons/Convenience/App-BigButtonsAndSwitches.png",
@@ -939,12 +939,12 @@ def initialize() {
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$state','init',1,true,settings?.minHomie)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$homie','3.0.1',1,true,settings?.minHomie) 
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$implementation','groovy:uk.co.ukusa.mqtt',1,true,settings?.minHomie)
-		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$fw/version','5 pre 5',1,true)
+		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$fw/version','5 pre 5a',1,true)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$fw/name','alpha',1,true)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$name',settings?.hubName,1,true)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$mac','BB:AA:DD:AA:55:55',1,true,settings?.minHomie)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$localip','1.2.3.4',1,true,settings?.minHomie)
-		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$implementation/version','alpha5 pre 5',1,true)
+		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$implementation/version','alpha5 pre 5a',1,true)
         if (modes) currentMode()
 	}
 	mqtt.setStateVar("logLevel",determineLogLevel(settings?.logging ?: "INFO"))
@@ -1040,11 +1040,16 @@ def initialize() {
         runIn (atomicState.delay, "subscribeHomieNameTopics")
 		//atomicState.delay += 5 // TODO tweak
 	}
-	else log ("Skipping homie MQTT discovery", "INFO")
+    else {
+        log ("Skipping homie MQTT discovery", "INFO")
+        if((settings?.HAStatestream)) start_HADiscovery(null)
+    }
+                
 	if (atomicState.abort) { 
             abort(6)
             return
     }
+    
 /*
 	if(settings?.HAStatestream){
 		log ("HA stateStream enabled", "INFO")
@@ -2078,7 +2083,7 @@ def HADiscoveryAdvertise (name, type="none", category="none", id='0', payON="tru
         pID=''
     String ID = "${id}"
     if (ID != '0') {
-        pID= ',"device": {"identifiers": "HE_'+ ID + '","name": "'+name+ '","sw_version":"alpha 5 pre 5","model":"'+"${atomicState.normHubName}"+'","manufacturer":"Hubitat"}'  // TODO Investigate if this can work
+        pID= ',"device": {"identifiers": "HE_'+ ID + '","name": "'+name+ '","sw_version":"alpha 5 pre 5a","model":"'+"${atomicState.normHubName}"+'","manufacturer":"Hubitat"}'  // TODO Investigate if this can work
     }
 
   
