@@ -18,13 +18,14 @@ This is still currently under the previous highly restrictive licence
 
 NB :   Setup issues
 
-1) I haven't verified that all atomicState and state variables are initialised correctly for new/update installs - you might see some error messages on lauch - please report
+1) I haven't yet verified that all atomicState and state variables are initialised correctly for new/update installs - you might see some error messages on launch - please report
 
-2) Under Configuration there is a new dropdown temporarily labeled "Please enable the first option Toggle All on/off - to select all devices*".  You need to do this now so the MQTT app can lookup device names using inbuilt drivers (as I no longer use my own drivers)
+2) Under Configuration there is a new dropdown temporarily labeled "Please enable the first option Toggle All on/off - to select all devices*".  You need to do this now so that the MQTT app can lookup device names using inbuilt drivers (as I no longer use my own drivers)
 
 3) If HA Discovery doesn't run you might have to enable homie discovery with a random homie device name to allow HA to start (it's currently waiting for homie discovery to finish)
 
-4) The devices discovered numbers are inconsistent and  'Startup Complete' summary shows up in the log well before HA and homie discovery have completed.
+4) The numbers of devices discovered are inconsistent and the 'Startup Complete' summary shows up in the log well before HA and homie discovery have completed.
 
 Getting there .. 
+
 Kevin
