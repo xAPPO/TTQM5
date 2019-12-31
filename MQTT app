@@ -772,7 +772,6 @@ def appButtonHandler(btn) {
 		}
     }
     else if (btn=="topics") {
-        log.warn "Looking up topics $atomicState.dTopic"
         atomicState.devTopics=[]
         mqtt.subscribeWildcardTopic (atomicState.dTopic)
     }
@@ -957,12 +956,12 @@ def initialize() {
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$state','init',1,true,settings?.minHomie)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$homie','3.0.1',1,true,settings?.minHomie) 
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$implementation','groovy:uk.co.ukusa.mqtt',1,true,settings?.minHomie)
-		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$fw/version','5 pre 5d',1,true)
+		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$fw/version','5 pre 5e',1,true)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$fw/name','alpha',1,true)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$name',settings?.hubName,1,true)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$mac','BB:AA:DD:AA:55:55',1,true,settings?.minHomie)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$localip','1.2.3.4',1,true,settings?.minHomie)
-		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$implementation/version','alpha5 pre 5d',1,true)
+		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$implementation/version','alpha5 pre 5e',1,true)
         if (modes) currentMode()
 	}
 	mqtt.setStateVar("logLevel",determineLogLevel(settings?.logging ?: "INFO"))
@@ -2104,7 +2103,7 @@ def HADiscoveryAdvertise (name, type="none", category="none", id='0', payON="tru
         pID=''
     String ID = "${id}"
     if (ID != '0') {
-        pID= ',"device": {"identifiers": "HE_'+ ID + '","name": "'+name+ '","sw_version":"alpha 5 pre 5d","model":"'+"${atomicState.normHubName}"+'","manufacturer":"Hubitat"}'  // TODO Investigate if this can work
+        pID= ',"device": {"identifiers": "HE_'+ ID + '","name": "'+name+ '","sw_version":"alpha 5 pre 5e","model":"'+"${atomicState.normHubName}"+'","manufacturer":"Hubitat"}'  // TODO Investigate if this can work
     }
 
   
@@ -4540,7 +4539,7 @@ def onoffEvent (evt) {
 		}
 	    else log("Bad reported OnOff status... was ${currStatus} for device ${evt.value}","WARN")
 */
-    log.info "data.status: $data.status     myOff: $myOFF and myON: $myON"
+    //log.info "data.status: $data.status     myOff: $myOFF and myON: $myON"
     try{
     if (data.status==myOFF) child.off()
     if (data.status==myON)  child.on()
@@ -4600,8 +4599,16 @@ def sensorEvent(evt) {
         log.info "Using attribute [$attName]"
     }
     attName = attList[0]
-    log.info "Looking here for $attName"
-    if (evt.value.contains ("humidity"))child.setHumidity(data.status) // TODO Check if device is not Omni does this error
+    if (attList.size()>1){log.info "Looking here for $attName"}
+    if (evt.value.contains ("humidity")){
+        try {child.setRelativeHumidity(data.status) // TODO Check for if device is not Omni
+            }
+        catch (e2) {
+        try {child.setRelativeHumidity(data.status) // Try Omni 
+            }
+        catch (e) {"Couldn't update humidity $child" + e}
+        }
+    }
     else if (evt.value.contains ("temperature"))child.setTemperature(data.status)
     else if (evt.value.contains ("accelertion"))child.setAcceleration(data.status)
     else if (evt.value.contains ("carbonDioxide"))child.setCarbonDioxed(data.status)
@@ -4638,11 +4645,12 @@ def old_binarySensorEvent(evt){
 	typeName=child.typeName
     
     attList=child.getSupportedAttributes()
+    attName = attList[0]
     log  ("Got " + child + " [" + + attList.size() + "] " + child.getSupportedAttributes(), "DEBUG")
-            if (attList.size()>1) log ("More than one [$attList.size] attributes on $child [child.getSupportedAttributes()]","WARN")
-
-            attName = attList[0]
+    if (attList.size()>1) {
+            log ("More than one [$attList.size] attributes on $child [child.getSupportedAttributes()]","WARN")
             log.info "Using attribute $attName"
+    }
     try{
         myOFF = child.getDataValue("$attName" + "_OFF")
         }
@@ -4824,10 +4832,12 @@ def inputBooleanEvent(evt) {   // TODO This is probably identical to 'group' abo
     
     
     attList=child.getSupportedAttributes()
-    log  ("Got " + child + " [" + + attList.size() + "] " + child.getSupportedAttributes(), "DEBUG")
-    if (attList.size()>1) log ("More than one [$attList.size] attributes on $child [child.getSupportedAttributes()]","WARN")
     attName = attList[0]
-    log.info "Using attribute [$attName]"
+    log  ("Got " + child + " [" + + attList.size() + "] " + child.getSupportedAttributes(), "DEBUG")
+    if (attList.size()>1){
+        log ("More than one [$attList.size] attributes on $child [child.getSupportedAttributes()]","WARN")
+        log.info "Using attribute [$attName]"
+    }
     typeName=child.typeName
     // need to filter here on which attributes are binary and which hold data
     try{
@@ -5488,7 +5498,7 @@ def createChildDevice(name, type, system, friendlyName, dType='default',seq=o) {
 		return
 	}
     else{
-    log.trace ("["+system+"] Device Enabled: $system " + name + " : " + dType)    // This is just for log visibility
+    //log.trace ("["+system+"] Device Enabled: $system " + name + " : " + dType)    // This was just for log visibility
     log ("["+system+"] Device enabled: $system " + name + " : " + dType, "DEBUG")
     }
 	child=getChildDevice(prefix+name) 
@@ -5686,7 +5696,7 @@ window: On means open, Off means closed
             	else if (system=="HA"){
                     child.updateDataValue("mqtt","auto")
                     child.updateDataValue("origin","Home Assistant")
-                    log.debug "Request to create $name of type $type"
+                    log ("Request to create $name of type $type","DEBUG")
                     control=true 
                     binary=true
                     if (type == 'sensor') {
