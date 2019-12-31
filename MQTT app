@@ -3510,10 +3510,18 @@ def colourDevices(evt, name=null,type=null, state=null, id=0) {
 				//mqtt.publishMsg (sTopic+'/'+category+'/v',state[2].toString(),1,settings?.homieStatesPersist)  // TODO Check is this right
 				//mqtt.publishMsg (sTopic+'/color',"${state[0]},${state[1]},${state[2]}",1,settings?.homieStatesPersist)
 	   			mqtt.publishMsg (sTopic+'/color/$format','hsv',1,true,settings?.minHomie)
-                int hue= state[0].intValue()
-                LHueNum = (hue*3.6).toInteger()
-                int sat= state[1].intValue()
-                if (val==null) val=99
+            
+//jwilliams for Ikea Tradfri tolerance           
+            
+   //      int hue= state[0].intValue()
+           int hue =0
+           if (state[0] != null) state[0].intValue()  
+           LHueNum = (hue*3.6).toInteger()
+  //       int sat= state[1].intValue()
+           int sat= 0
+           if (state[1] != null) state[1].intValue()
+           if (val==null) val=99
+// end jwilliams
                 mqtt.publishMsg (sTopic+'/color',"${LHueNum},${sat},${val}",1,settings?.homieStatesPersist)
                 // Where does this get published - old format .. TODO BUG ??
 				//mqtt.publishMsg (sTopic+'/color','{"h":'+state[0].toString()+',"s":'+state[1].toString()+',"v":'+state[2].toString()+'}',1,settings?.homieStatesPersist)
