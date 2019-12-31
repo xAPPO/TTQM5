@@ -229,7 +229,7 @@ def vMQTT() {
 
             }
 
-        }
+        }  //end for i loop
         
             
 
@@ -266,9 +266,10 @@ def vMQTT() {
             section {}
             
                 section {
-                    app.updateSetting("vDev",["none"])
+                    //app.updateSetting("vDev",["none"])
+                    //app.removeSetting("vDev")
                     
-                    input(name: "vDev", type: dType, title: "Edit this $capability device",description: null, defaultValue: "none",  multiple: false, required: false, submitOnChange: true)
+                    input(name: "vDev", type: dType, title: "Edit this $capability device",description: null, multiple: false, required: false, submitOnChange: true)
                     if (vDev == null) {
                         app.updateSetting("vDevName","")
                     input (name: "vDevName",type: "text", title: "... or create a new virtual $capability device called ..." , required: false, submitOnChange: true)
@@ -483,7 +484,17 @@ def vMQTT() {
                             defOne=vDev.getDataValue("${atomicState.attList[i]}_Topic")
                             if (defOne != null){
                                 log ("Is this a valid topic to use for ID [$i] [$defOne] ?","DEBUG")
-                                if (i==0) vDev.setDeviceNetworkId("MQTT:virtual_" + defOne )
+                                if (i==0){
+                                    try {
+                                        vDev.setDeviceNetworkId("MQTT:virtual_" + defOne )
+                                    }
+                                    catch(e) { 
+                                        log ("DNI nametopic [MQTT:virtual_$defOne already exists please choose another: " +e,"ERROR")
+                                        dup=getChildDevice("MQTT:virtual_"+defOne)
+                                        if  (dup!=null) log ("Duplicate device is called $dup.displayName","ERROR")
+                                    }
+                                }
+                                         }
                                 if (i>0) log.warn "Several state topics for $vDev"
                             }
                             defTwo=vDev.getDataValue("${atomicState.attList[i]}_Cmd")                        
@@ -549,14 +560,18 @@ def vMQTT() {
                     }
                 }
             }
-    }
-    catch (e) {}
-                } // not enabled for MQTT
-            else 
-                section (title: "This device <b> $vDev.displayName </b> is not enabled on MQTT") {       
-                }
-        }            
         }
+        catch (e) {}
+        } // not enabled for MQTT
+        
+        
+        
+        
+            else
+                section (title: "This device <b> $vDev </b> is not enabled on MQTT") {       
+                }
+        } // end dynamic page            
+        
     }
 
 
@@ -728,13 +743,13 @@ section {
         input "Sonoff_Devices", "enum", multiple: true, title: "Discovered  ${atomicState.ShellyDevices.size()} Sonoff Devices &nbsp &nbsp &nbsp [^${SOsw}]", options: atomicState.SonoffDevices.sort()
 
         }
-*/
+
         section {}
         
         section ("<b>Configure MQTT devices</b>", hideable: true, hidden: true) {
         input "vAll", "enum", multiple: false, title: "All MQTT virtuals" , options: atomicState.MQTTvirtuals.sort()
         }
-
+*/
 
 	}
 }
@@ -769,7 +784,8 @@ def appButtonHandler(btn) {
         atomicState.Mappings=[:]
     }
     else if (btn=="oldVDev") {
-        log.error "TODO Will delete $vDev here TODO"
+        deleteChildDevice(vDev.deviceNetworkId)
+        log ("Deleted virtual device $vDev","WARN")
     }
 }
 
@@ -941,7 +957,7 @@ def initialize() {
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$state','init',1,true,settings?.minHomie)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$homie','3.0.1',1,true,settings?.minHomie) 
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$implementation','groovy:uk.co.ukusa.mqtt',1,true,settings?.minHomie)
-		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$fw/version','5 pre 5a',1,true)
+		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$fw/version','5 pre 5c',1,true)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$fw/name','alpha',1,true)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$name',settings?.hubName,1,true)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$mac','BB:AA:DD:AA:55:55',1,true,settings?.minHomie)
@@ -2121,9 +2137,9 @@ def HADiscoveryAdvertise (name, type="none", category="none", id='0', payON="tru
 					//pHSValTemp = ',"hs_value_template": "{{ value_json.h }},{{ value_json.s }}"'
                     pHSValTemp = ',"hs_value_template":"' + "{{value.split(',')[0]}},{{value.split(',')[1]}}" + '"'
 					HAtype="light"  // for discovery
-					payload='{'+pName+pAvail+pUID+pState+pCmd+pUOM+pON+pOFF+pIcon+pDev+pValTemp+pOnType+pBriState+pBriCmd+pBriTemp+pBriScale+pColState+pColTempCmd+pColTempVal+pHSState+pHSCmd+pHSValTemp+pID+'}'
+					payload='{'+pName+pAvail+pAvailPay+pNotAvailPay+pUID+pState+pCmd+pUOM+pON+pOFF+pIcon+pDev+pValTemp+pOnType+pBriState+pBriCmd+pBriTemp+pBriScale+pColState+pColTempCmd+pColTempVal+pHSState+pHSCmd+pHSValTemp+pID+'}'
 				}
-				else payload='{'+pName+pAvail+pUID+pState+pCmd+pUOM+pON+pOFF+pIcon+pDev+pValTemp+pOnType+pBriState+pBriCmd+pBriTemp+pBriScale+pID+'}'
+				else payload='{'+pName+pAvail+pAvailPay+pNotAvailPay+pUID+pState+pCmd+pUOM+pON+pOFF+pIcon+pDev+pValTemp+pOnType+pBriState+pBriCmd+pBriTemp+pBriScale+pID+'}'
 			}
 		}	
 		else if (type=="binary_sensor" | type=="sensor") {
@@ -2225,7 +2241,7 @@ window: On means open, Off means closed
 			pIcon = '' // ',"icon":"mdi:lock"'
 			pDev = ''
 			pValTemp = ',"value_template":"{{ value }}"'
-			payload='{'+pName+pAvail+pUID+pState+pCmd+pUOM+pLOCK+pUNLOCK+pIcon+pDev+pValTemp+'}'
+			payload='{'+pName+pAvail+pAvailPay+pNotAvailPay+pUID+pState+pCmd+pUOM+pLOCK+pUNLOCK+pIcon+pDev+pValTemp+'}'
         }
     
         else log ("Unknown Device type $type presented for HA MQTT Discovery advertise from device $name","WARN")
@@ -2404,13 +2420,13 @@ def subscribeHADevices() {  // ToDo - these might benefit from pacing
 	//mqtt.subscribeTopic(atomicState.HA+'/updater/+/friendly_name')
 }
 
-def unsubscribeHADevices() {  // ToDo - these might benefit from pacing // done this because they get updated on every state chnage
+def unsubscribeHADevices() {  
 	log ("Unsubscribing from HA switches, lights and sensors friendly names topics ", "INFO")
 	mqtt.unsubscribeTopic(atomicState.HA+'/switch/+/friendly_name')
 	mqtt.unsubscribeTopic(atomicState.HA+'/light/+/friendly_name')
 	mqtt.unsubscribeTopic(atomicState.HA+'/sensor/+/friendly_name') // // this creates device
-   // mqtt.subscribeTopic(atomicState.HA+'/sensor/+/device_class') // // this creates device
-	//mqtt.subscribeTopic(atomicState.HA+'/binary_sensor/+/device_class')// this creates device
+   // mqtt.unsubscribeTopic(atomicState.HA+'/sensor/+/device_class') // // this creates device
+	//mqtt.unsubscribeTopic(atomicState.HA+'/binary_sensor/+/device_class')// this creates device
 	mqtt.unsubscribeTopic(atomicState.HA+'/binary_sensor/+/friendly_name')  // TODO spread /delay a bit
 	mqtt.unsubscribeTopic(atomicState.HA+'/group/+/friendly_name')
     mqtt.unsubscribeTopic(atomicState.HA+'/person/+/friendly_name')
@@ -2419,13 +2435,14 @@ def unsubscribeHADevices() {  // ToDo - these might benefit from pacing // done 
     mqtt.unsubscribeTopic(atomicState.HA+'/device_tracker/+/friendly_name')
     mqtt.unsubscribeTopic(atomicState.HA+'/climate/+/friendly_name')
     mqtt.unsubscribeTopic(atomicState.HA+'/lock/+/friendly_name')
+    mqtt.unsubscribeTopic(atomicState.HA+'/sensor/+/unit_of_measurement')
         
     // Currently not discovering these :   
-    //mqtt.subscribeTopic(atomicState.HA+'/automation/+/friendly_name')
-    //mqtt.subscribeTopic(atomicState.HA+'media_player/+/friendly_name')
-	//mqtt.subscribeTopic(atomicState.HA+'/persistent_notification/+/friendly_name')
-    //mqtt.subscribeTopic(atomicState.HA+'/sun/+/friendly_name')
-	//mqtt.subscribeTopic(atomicState.HA+'/updater/+/friendly_name')
+    //mqtt.unsubscribeTopic(atomicState.HA+'/automation/+/friendly_name')
+    //mqtt.unsubscribeTopic(atomicState.HA+'media_player/+/friendly_name')
+	//mqtt.unsubscribeTopic(atomicState.HA+'/persistent_notification/+/friendly_name')
+    //mqtt.unsubscribeTopic(atomicState.HA+'/sun/+/friendly_name')
+	//mqtt.unsubscribeTopic(atomicState.HA+'/updater/+/friendly_name')
 }
 
 def subscribeHADeviceEvents() {// This runs 10 secs after above currently
@@ -3575,7 +3592,7 @@ def colourDevices(evt, name=null,type=null, state=null, id=0) {
 	}
     checkNodes(10, name) 
 	if (evt==null) {  // this will limit HADiscovery to startup or 'upon request' for devices
-		HADiscoveryAdvertise(name,"light","colour,id")
+		HADiscoveryAdvertise(name,"light","colour", id)
 	}
 	else if (settings?.HADiscovery) log ("HADiscovery RGB discarded for ${name}","DEBUG")	
 }
@@ -3857,7 +3874,7 @@ def HABinarySensorCapability(evt) {  // TODO merge with above
 	dType=data.type
     sequ=data.seq
 	if (temp.contains(evt.value)) {
-		//log ("Already in list: ${evt.value}", "TRACE")
+        //log ("Already in list: ${evt.value} ${dType}", "TRACE")
 	}
 	else {
 		log ("HA Adding binary sensor to list: ${evt.value}  ${dType}  ", "TRACE")
@@ -4596,11 +4613,14 @@ def sensorEvent(evt) {
     else if (evt.value.contains ("smoke"))child.setSmoke(data.status)
     else if (evt.value.contains ("water"))child.setVariable(data.status)
     // pressure will go into variable
-    else log ("Sensor not handled specifically with name $evt.value and value $data.status","WARN")
-	child.setVariable(data.status)
+    else log ("Sensor not handled specifically yet with name $evt.value and value $data.status","WARN")
 }
 
 def binarySensorEvent(evt) {
+    inputBooleanEvent(evt)
+}
+def old_binarySensorEvent(evt){
+
 	def data = parseJson(evt.data)
     //log ("event data: ${data}", "INFO")
 	log ("Received a binary sensor event from ${evt.value}  state is   ${data.status}", "TRACE")
@@ -5660,6 +5680,7 @@ window: On means open, Off means closed
             	else if (system=="HA"){
                     child.updateDataValue("mqtt","auto")
                     child.updateDataValue("origin","Home Assistant")
+                    log.debug "type is $type and attributes are $attrData"
                     if (type == 'onoff') {
                         if (attrData!=null) {
                             child.updateDataValue("${attrData}_Topic]",atomicState.HA+'/switch/'+name+'/state')
