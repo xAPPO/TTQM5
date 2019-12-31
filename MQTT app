@@ -957,12 +957,12 @@ def initialize() {
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$state','init',1,true,settings?.minHomie)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$homie','3.0.1',1,true,settings?.minHomie) 
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$implementation','groovy:uk.co.ukusa.mqtt',1,true,settings?.minHomie)
-		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$fw/version','5 pre 5c',1,true)
+		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$fw/version','5 pre 5d',1,true)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$fw/name','alpha',1,true)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$name',settings?.hubName,1,true)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$mac','BB:AA:DD:AA:55:55',1,true,settings?.minHomie)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$localip','1.2.3.4',1,true,settings?.minHomie)
-		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$implementation/version','alpha5 pre 5c',1,true)
+		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$implementation/version','alpha5 pre 5d',1,true)
         if (modes) currentMode()
 	}
 	mqtt.setStateVar("logLevel",determineLogLevel(settings?.logging ?: "INFO"))
@@ -2104,7 +2104,7 @@ def HADiscoveryAdvertise (name, type="none", category="none", id='0', payON="tru
         pID=''
     String ID = "${id}"
     if (ID != '0') {
-        pID= ',"device": {"identifiers": "HE_'+ ID + '","name": "'+name+ '","sw_version":"alpha 5 pre 5c","model":"'+"${atomicState.normHubName}"+'","manufacturer":"Hubitat"}'  // TODO Investigate if this can work
+        pID= ',"device": {"identifiers": "HE_'+ ID + '","name": "'+name+ '","sw_version":"alpha 5 pre 5d","model":"'+"${atomicState.normHubName}"+'","manufacturer":"Hubitat"}'  // TODO Investigate if this can work
     }
 
   
@@ -4583,7 +4583,7 @@ def dimEvent (evt) {
 
 def sensorEvent(evt) {
 	def data = parseJson(evt.data)
-    log ("Received a sensor event from ${evt.value} level ${data.status}", "TRACE")
+    log ("Received a sensor event from ${evt.value} level ${data.status}", "INFO")
 	child=getChildDevice("MQTT:homie_"+evt.value)
 	if (child==null) {
 		//log ("getChild failed for " + evt.value, "WARN")
@@ -4600,7 +4600,7 @@ def sensorEvent(evt) {
         log.info "Using attribute [$attName]"
     }
     attName = attList[0]
-    log.info "Looking for $attName"
+    log.info "Looking here for $attName"
     if (evt.value.contains ("humidity"))child.setHumidity(data.status) // TODO Check if device is not Omni does this error
     else if (evt.value.contains ("temperature"))child.setTemperature(data.status)
     else if (evt.value.contains ("accelertion"))child.setAcceleration(data.status)
@@ -5526,6 +5526,11 @@ def createChildDevice(name, type, system, friendlyName, dType='default',seq=o) {
         devType="Virtual Contact Sensor"    //devType='Virtual Switch'   //This should be a contact sensor or something as not controllabe
         attrData="contact"
     }
+    else if (type=='binary_sensor') { 
+        devType="Virtual Contact Sensor"    //devType='Virtual Switch'   //This should be a contact sensor or something as not controllabe
+        attrData="contact"
+    }
+    
     else if (type=='presence') devType='Virtual Presence'
     else if (type=='button') devType='Virtual Button'
     else if (type=='lock') devType='Virtual Lock'
@@ -5600,6 +5605,7 @@ window: On means open, Off means closed
 */
     	// TODO Check over and add more colour bulbs etc ?
         // HA default mappings
+                                                                                                                   // TODO add binary default values
         if (dType=="default") devType= "Virtual Omni Sensor"
         else if (dType=="None") devType= "Virtual Contact Sensor"
         else if (dType=="acceleration") devType= "Virtual Acceleration Sensor"
@@ -5680,8 +5686,14 @@ window: On means open, Off means closed
             	else if (system=="HA"){
                     child.updateDataValue("mqtt","auto")
                     child.updateDataValue("origin","Home Assistant")
-                    log.debug "type is $type and attributes are $attrData"
-                    if (type == 'onoff') {
+                    log.debug "Request to create $name of type $type"
+                    control=true 
+                    binary=true
+                    if (type == 'sensor') {
+                        control=false 
+                        binary=false
+                    }
+                    if (type == 'onoff'){
                         if (attrData!=null) {
                             child.updateDataValue("${attrData}_Topic]",atomicState.HA+'/switch/'+name+'/state')
                             child.updateDataValue("${attrData}_Cmd", atomicState.HA+'/switch/'+name+'/state/cmd')
@@ -5703,19 +5715,10 @@ window: On means open, Off means closed
                         }
 
 					}
-					else if (type == 'sensor') {  // no command topic
-                        if (attrData!=null) {
-                            log ("HA sensor using [$devType] - maybe not handled correctly yet [ $attrData ]","ERROR")
-                            child.updateDataValue("${attrData}_Topic",atomicState.HA+'/sensor/'+name+'/state')
-                            child.updateDataValue("${attrData}_Topic",atomicState.HA+'/sensor/'+name+'/state')
-                            //TODO incomplete
-                        }
-                        log.trace "This was requested to be a $dType device $child.getTypeName()"
-                            
-					}
+
 					else if (type == 'group') {
                         if (attrData!=null) {
-                            child.updateDataValue("${attrData}_Topic]",atomicState.HA+'/group/'+name+'/state')
+                            child.updateDataValue("${attrData}_Topic",atomicState.HA+'/group/'+name+'/state')
                             child.updateDataValue("${attrData}_Cmd", atomicState.HA+'/group/'+name+'/state/cmd')
                             child.updateDataValue("${attrData}_ON","on")
                             child.updateDataValue("${attrData}_OFF","off")
@@ -5723,26 +5726,37 @@ window: On means open, Off means closed
 					}
                     else if (type == 'inputBoolean') {
                         if (attrData!=null) {
-                            child.updateDataValue("${attrData}_Topic]",atomicState.HA+'/input_boolean/'+name+'/state')
+                            child.updateDataValue("${attrData}_Topic",atomicState.HA+'/input_boolean/'+name+'/state')
                             child.updateDataValue("${attrData}_Cmd", atomicState.HA+'/input_boolean/'+name+'/state/cmd')
                             child.updateDataValue("${attrData}_ON","on")
                             child.updateDataValue("${attrData}_OFF","off")
                         }
 					}
-					else {
-                        log ("HA type $type with $attrData - not handled yet","WARN")
-/*
-                         // loop through attributes and create default data value for on/offs??
-                            if 
-                            if (attrData!=null) {
-                            child.updateDataValue("${attrData}_Topic",atomicState.HA+'/'+type+'/'+name+'/state')     // TODO precarious
-                            child.updateDataValue("${attrData}_Cmd",atomicState.HA+'/'+type+'/'+name+'/state/cmd')
-                            child.updateDataValue("${attrData}_ON","on")                                             // ##### ToDo dont do this if already has a value (shouldnt happen as new device)
+                    else if (type == 'binary_sensor') {
+                        if (attrData!=null) {
+                            control=false
+                            child.updateDataValue("${attrData}_Topic",atomicState.HA+'/binary_sensor/'+name+'/state')
+                            //child.updateDataValue("${attrData}_Cmd", atomicState.HA+'/binary_sensor/'+name+'/state/cmd')
+                            child.updateDataValue("${attrData}_ON","on")
                             child.updateDataValue("${attrData}_OFF","off")
                         }
-*/
-						 }
-                    attrData=null
+					}
+					else {
+                        log ("HA type $type  - not recognised yet so creating defaults","WARN")
+
+                        child.capabilities.each { cap ->
+                          cap.attributes.each { attr ->
+                            log ( "Unrecognised HA device [$child] so adding default MQTT data for [$attr]","INFO")
+                            child.updateDataValue("${attr}_Topic",atomicState.HA+'/'+type+'/'+name+'/state')
+                            if (control) child.updateDataValue("${attr}_Cmd", atomicState.HA+'/'+type+'/'+name+'/state/cmd')
+                            if (binary) {
+                                  child.updateDataValue("${attr}_ON","on")
+                                  child.updateDataValue("${attr}_OFF","off")
+                            }
+                          }
+                       }
+                    }
+                     attrData=null
                    }  //HA system
             
             
