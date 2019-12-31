@@ -71,7 +71,7 @@ def initialize() {
     state.maxComplete=0
 
     
-    version="alpha5 pre 5a"
+    version="alpha5 pre 5b"
     if (state.delay==null) state.delay=250 // inter state.maxImmediate event pacing in mS
 
 //    sendEvent (name: "Status", value: "disconnected" , isStateChange: true)
@@ -365,7 +365,7 @@ def parse(String description) {
                 return evt10
 				}
                 else if (topic[3]=='device_class'){
-                log ("### [" + payload[0] +"] type for HA Sensor Device ${topic[2]}", "DEBUG")
+                log ("### [" + payload[0] +"] type for HA Sensor Device ${topic[2]}", "TRACE")
 				def evt11= createEvent(name: "HASensorType", value: topic[2], data: [payload: deQuote(payload[0]),seq: sequence], isStateChange: true)
 				pause (delay) // pace
 				state.dispatch = now()
@@ -409,7 +409,7 @@ def parse(String description) {
                 return evt19
 				}
 				else if (topic[3]=='device_class'){ 
-                log ("### [" + payload[0] +"] type for HA Binary Sensor Device ${topic[2]}", "DEBUG")
+                log ("### [" + payload[0] +"] type for HA Binary Sensor Device ${topic[2]}", "ERROR")
 				//log ("### Device ${topic[2]} is a HA binary sensor and is of type " +payload[0], "INFO")
 				// create device from here as need device_class to select driver
 				def evt18= createEvent(name: "HABinarySensorDev", value: topic[2], data: [type: deQuote(payload[0]),seq: sequence], isStateChange: true)  // TODO handle in app
@@ -743,7 +743,8 @@ def parse(String description) {
            if (topic[2]=='$fw') {  // This is a random (non updating) topic used to pace the progress of subscriptions
             log  ("============ Got an MQTT 'pace' message ", "INFO")
             if (topic[3]=='name') {
-                log  ("============ Asking HA Discovery to start ============","INFO")
+                log  ("============ homie Discovery has completed ============","INFO")
+                log  ("============ Asking HA Discovery to start  ============","INFO")
                 //unsubscribeTopic ('homie/development/$fw/name')
                 
                // def evt99 = createEvent (name: "startHADiscovery", value: "true", data: [seq: sequence], isStateChange: true)
@@ -766,14 +767,10 @@ def parse(String description) {
                 sendEvent(name: "unsubscribeFriendly", value: "true",isStateChange: true) 
             }
             else if (topic[3]=='version') {
-                log  ("============ spare ============","INFO")
+
+                log  ("============  HA Discovery has completed   ============","INFO")
                 //unsubscribeTopic ('homie/development/$fw/client')
-/*
-                state.seq2++
-                sequence=state.seq2
-                state.dispatch = now()
-*/
-                //sendEvent(name: "unsubscribeFriendly", value: "true",isStateChange: true) 
+
             }
 
 
