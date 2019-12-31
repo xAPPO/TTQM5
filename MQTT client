@@ -409,7 +409,7 @@ def parse(String description) {
                 return evt19
 				}
 				else if (topic[3]=='device_class'){ 
-                log ("### [" + payload[0] +"] type for HA Binary Sensor Device ${topic[2]}", "ERROR")
+                log ("### [" + payload[0] +"] type for HA Binary Sensor Device ${topic[2]}", "TRACE")
 				//log ("### Device ${topic[2]} is a HA binary sensor and is of type " +payload[0], "INFO")
 				// create device from here as need device_class to select driver
 				def evt18= createEvent(name: "HABinarySensorDev", value: topic[2], data: [type: deQuote(payload[0]),seq: sequence], isStateChange: true)  // TODO handle in app
