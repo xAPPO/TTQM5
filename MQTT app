@@ -956,12 +956,12 @@ def initialize() {
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$state','init',1,true,settings?.minHomie)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$homie','3.0.1',1,true,settings?.minHomie) 
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$implementation','groovy:uk.co.ukusa.mqtt',1,true,settings?.minHomie)
-		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$fw/version','5 pre 5e',1,true)
+		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$fw/version','5 pre 5f',1,true)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$fw/name','alpha',1,true)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$name',settings?.hubName,1,true)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$mac','BB:AA:DD:AA:55:55',1,true,settings?.minHomie)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$localip','1.2.3.4',1,true,settings?.minHomie)
-		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$implementation/version','alpha5 pre 5e',1,true)
+		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$implementation/version','alpha5 pre 5f',1,true)
         if (modes) currentMode()
 	}
 	mqtt.setStateVar("logLevel",determineLogLevel(settings?.logging ?: "INFO"))
@@ -2129,8 +2129,9 @@ def HADiscoveryAdvertise (name, type="none", category="none", id='0', payON="tru
 				if (category=="colour") {
 					pColState = ',"color_temp_state_topic": "' + sColorTopic + '-temperature/temp"'
 					pColTempCmd = ',"color_temp_command_topic": "' + sColorTopic + '-temperature/set"'
-					pColTempVal = ',"color_temp_value_template": "{{ ((value | float / 100) * (500 - 153)) + 153  }}"'
-					//pHSState = ',"hs_state_topic": "' + sColorTopic + '/hsv"'
+					//pColTempVal = ',"color_temp_value_template": "{{ ((value | float / 100) * (500 - 153)) + 153  }}"'  
+					pColTempVal = ',"color_temp_value_template": "{{ value | round(0)  }}"'  //@jwilliams
+                    //pHSState = ',"hs_state_topic": "' + sColorTopic + '/hsv"'
                     pHSState = ',"hs_state_topic": "' + sColorTopic +'"'
 					pHSCmd = ',"hs_command_topic": "' + sColorTopic + '/set"'
 					//pHSValTemp = ',"hs_value_template": "{{ value_json.h }},{{ value_json.s }}"'
@@ -2420,13 +2421,14 @@ def subscribeHADevices() {  // ToDo - these might benefit from pacing
 }
 
 def unsubscribeHADevices() {  
+    // Can't wildcard these as the subs were setup individually
 	log ("Unsubscribing from HA switches, lights and sensors friendly names topics ", "INFO")
 	mqtt.unsubscribeTopic(atomicState.HA+'/switch/+/friendly_name')
 	mqtt.unsubscribeTopic(atomicState.HA+'/light/+/friendly_name')
-	mqtt.unsubscribeTopic(atomicState.HA+'/sensor/+/friendly_name') // // this creates device
-   // mqtt.unsubscribeTopic(atomicState.HA+'/sensor/+/device_class') // // this creates device
-	//mqtt.unsubscribeTopic(atomicState.HA+'/binary_sensor/+/device_class')// this creates device
-	mqtt.unsubscribeTopic(atomicState.HA+'/binary_sensor/+/friendly_name')  // TODO spread /delay a bit
+	mqtt.unsubscribeTopic(atomicState.HA+'/sensor/+/friendly_name') 
+   // mqtt.unsubscribeTopic(atomicState.HA+'/sensor/+/device_class') 
+	//mqtt.unsubscribeTopic(atomicState.HA+'/binary_sensor/+/device_class')
+	mqtt.unsubscribeTopic(atomicState.HA+'/binary_sensor/+/friendly_name')  
 	mqtt.unsubscribeTopic(atomicState.HA+'/group/+/friendly_name')
     mqtt.unsubscribeTopic(atomicState.HA+'/person/+/friendly_name')
 	mqtt.unsubscribeTopic(atomicState.HA+'/input_boolean/+/friendly_name')
@@ -2435,8 +2437,22 @@ def unsubscribeHADevices() {
     mqtt.unsubscribeTopic(atomicState.HA+'/climate/+/friendly_name')
     mqtt.unsubscribeTopic(atomicState.HA+'/lock/+/friendly_name')
     mqtt.unsubscribeTopic(atomicState.HA+'/sensor/+/unit_of_measurement')
+    
+    mqtt.unsubscribeTopic(atomicState.HA+'/switch/+/device_class')
+	mqtt.unsubscribeTopic(atomicState.HA+'/light/+/device_class')
+	mqtt.unsubscribeTopic(atomicState.HA+'/sensor/+/device_class') 
+   // mqtt.unsubscribeTopic(atomicState.HA+'/sensor/+/device_class')
+	//mqtt.unsubscribeTopic(atomicState.HA+'/binary_sensor/+/device_class')
+	mqtt.unsubscribeTopic(atomicState.HA+'/binary_sensor/+/device_class')
+	mqtt.unsubscribeTopic(atomicState.HA+'/group/+/device_class')
+    mqtt.unsubscribeTopic(atomicState.HA+'/person/+/device_class')
+	mqtt.unsubscribeTopic(atomicState.HA+'/input_boolean/+/device_class')
+    mqtt.unsubscribeTopic(atomicState.HA+'/cover/+/device_class')
+    mqtt.unsubscribeTopic(atomicState.HA+'/device_tracker/+/device_class')
+    mqtt.unsubscribeTopic(atomicState.HA+'/climate/+/device_class')
+    mqtt.unsubscribeTopic(atomicState.HA+'/lock/+/device_class')
         
-    // Currently not discovering these :   
+    // Currently not discovering these devices :   
     //mqtt.unsubscribeTopic(atomicState.HA+'/automation/+/friendly_name')
     //mqtt.unsubscribeTopic(atomicState.HA+'media_player/+/friendly_name')
 	//mqtt.unsubscribeTopic(atomicState.HA+'/persistent_notification/+/friendly_name')
@@ -2734,7 +2750,7 @@ def thermostatDevices(evt, name=null, type=null, state=null, id=0, multiple=fals
 		name=evt.displayName
 		state=evt.value
 		xType=evt.name  // this is the attribute name
-		log ("This got called by event ${name} with ${state}   ${evt.getDevice()}  ${evt.device.typeName} ${xType} ${evt.getDisplayName()}", "DEBUG")
+		log ("[t] This got called by event ${name} with ${state}   ${evt.getDevice()}  ${evt.device.typeName} ${xType} ${evt.getDisplayName()}", "DEBUG")
 	} 
 	else {
 		xType=type
@@ -2760,6 +2776,15 @@ def thermostatDevices(evt, name=null, type=null, state=null, id=0, multiple=fals
 				//mqtt.publishMsg (sTopic+'/'+category+'/$unit',UOM,1,true)
 				if (tempUnits=="Fahrenheit °F") UOM="°F" else UOM="°C"
 				mqtt.publishMsg (sTopic+'/'+category+'/$format','-460:9999',1,true,settings?.minHomie)
+				mqtt.publishMsg (sTopic+'/'+category+'/$unit',UOM,1,true,settings?.minHomie)
+				HAtype="sensor"
+			}
+            if (xType=='humidity'){
+				category='measure-humidity'
+				mqtt.publishMsg (sTopic+'/'+category+'/$datatype',"integer",1,true,settings?.minHomie)
+				//mqtt.publishMsg (sTopic+'/'+category+'/$unit',UOM,1,true)
+                UOM="%"
+				mqtt.publishMsg (sTopic+'/'+category+'/$format','0:100',1,true,settings?.minHomie)
 				mqtt.publishMsg (sTopic+'/'+category+'/$unit',UOM,1,true,settings?.minHomie)
 				HAtype="sensor"
 			}
@@ -2954,7 +2979,7 @@ def keypadDevices(evt, name=null, type=null, state=null, id=0, multiple=false) {
         
 			else {
 				category = 'unknown'
-				log ("k Unknown Category for type ${xType} reported by device ${name}","ERROR")
+				log ("[k] Unknown Category for type ${xType} reported by device ${name}","ERROR")
 			}
         
         //   ####### homie #######
@@ -3084,7 +3109,7 @@ def otherDevices(evt, name=null, type=null, state=null, id=0, multiple=false) { 
         
 			else {
 				category = 'unknown'
-				log ("o Unknown Category for type ${xType} reported by device ${name}","ERROR")
+				log ("[o] Unknown Category for type ${xType} reported by device ${name}","ERROR")
 			}
         
         //   ####### homie #######
@@ -3137,7 +3162,7 @@ def sensorDevices(evt, name=null, type=null, state=null, id=0, multiple=false) {
 		name=evt.displayName
 		state=evt.value
 		xType=evt.name  // this is the attribute name
-		log ("This got called by event ${name} with ${state}   ${evt.getDevice()}  ${evt.device.typeName} ${xType} ${evt.getDisplayName()}", "DEBUG")
+		log ("[s] This got called by event ${name} with ${state}   ${evt.getDevice()}  ${evt.device.typeName} ${xType} ${evt.getDisplayName()}", "DEBUG")
 	} 
 	else {
 		xType=type
@@ -3326,7 +3351,7 @@ def sensorDevices(evt, name=null, type=null, state=null, id=0, multiple=false) {
                  }
 			else {
 				category = 'unknown'
-				log ("s Unknown Category for type ${xType} reported by device ${name}","ERROR")
+				log ("[s] Unknown Category for type ${xType} reported by device ${name}","ERROR")
 			}
 			
 			sTopic="homie/${atomicState.normHubName}/${normName}"     //+category
@@ -3419,8 +3444,11 @@ def colourDevices(evt, name=null,type=null, state=null, id=0) {
 				mqtt.publishMsg (sTopic+'/'+category+'/$unit','Kelvin',1,true,settings?.minHomie)
 				mqtt.publishMsg (sTopic+'/'+category+'/$format','1500:8000',1,true,settings?.minHomie)
 				mqtt.publishMsg (sTopic+'/'+category+'/$settable','true',1,true,settings?.minHomie)
-                int mireds=(int)1000000/state.toInteger()
+                //int mireds=(int)1000000/state.toInteger()
+                int mireds=state.toInteger() //@jwilliams
+                if (mireds>1000) mireds=(int)1000000/mireds // was Kelvin
                 mqtt.publishMsg (sTopic+'/'+category+'/mireds',"${mireds}",1,true,settings?.minHomie)
+                mqtt.publishMsg (sTopic+'/'+category+'/temp',"${mireds}",1,true,settings?.minHomie)
 				//UOM="%"
 				HAtype="RGB"
 			}
