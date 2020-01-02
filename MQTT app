@@ -408,7 +408,7 @@ def vMQTT() {
                         input(name: "cmdSuffix", type: "text", title: "Command suffix for topics eg /set or /cmd", required: false, submitOnChange: true)
                     }
                } //end section
-              
+            atomicState.devTopics = (atomicState.devTopics != null)?atomicState.devTopics:[]
             temp2=atomicState.devTopics
             for (i=0; i < temp2.size(); i++) {
                 temp2[i]=temp2[i]+ "${cmdSuffix}"
@@ -430,7 +430,7 @@ def vMQTT() {
     
                          try {
                             data=vDev.getDataValue("${atomicState.attList[i]}_Topic")   
-                            if (newDev) app.updateSetting (var,data)
+                             if (newDev)  app.updateSetting (var,data)
                          }
                          catch (e) {
                              log.debug "No state for $i"
@@ -453,7 +453,9 @@ def vMQTT() {
                                 log.debug "[$i] UPDATE device $vDev.name - ${atomicState.attList[i]}_Topic"
                                 log.debug "[$i] UPDATING from " + vDev.getDataValue("${atomicState.attList[i]}_Topic") 
                                 vDev.updateDataValue("${atomicState.attList[i]}_Topic", settings[var])
+                                mqtt.subscribeTopic("${settings[var]}")
                                 log.debug "[$i] UPDATED to ${settings[var]}"
+                                
                                 log.debug "  "
                             }
                         if (!sensor) {
@@ -956,12 +958,12 @@ def initialize() {
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$state','init',1,true,settings?.minHomie)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$homie','3.0.1',1,true,settings?.minHomie) 
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$implementation','groovy:uk.co.ukusa.mqtt',1,true,settings?.minHomie)
-		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$fw/version','5 pre 5f',1,true)
+		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$fw/version','5 pre 5g',1,true)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$fw/name','alpha',1,true)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$name',settings?.hubName,1,true)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$mac','BB:AA:DD:AA:55:55',1,true,settings?.minHomie)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$localip','1.2.3.4',1,true,settings?.minHomie)
-		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$implementation/version','alpha5 pre 5f',1,true)
+		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$implementation/version','alpha5 pre 5g',1,true)
         if (modes) currentMode()
 	}
 	mqtt.setStateVar("logLevel",determineLogLevel(settings?.logging ?: "INFO"))
@@ -1784,7 +1786,7 @@ def synchDevices(evt) {
        
 			mydName = it.name
 			myName = it.displayName
-			switchedDim(null, myName,"onoff", it.currentSwitch,it.deviceID)
+			switchedDim(null, myName,"onoff", it.currentSwitch,it.id)
 			dimmed(null, myName, "dim", it.currentLevel,it.id)
             hsv=[it.currentHue, it.currentSaturation, it.currentLevel]
             colourDevices(null,myName,"hsv",hsv,it.id) // not useful as always #FFFFFF - what does this call provide additionally to MQTTRGB above ?
@@ -4637,13 +4639,9 @@ def sensorEvent(evt) {
     attName = attList[0]
     if (attList.size()>1){log.info "Looking here for $attName"}
     if (evt.value.contains ("humidity")){
-        try {child.setRelativeHumidity(data.status) // TODO Check for if device is not Omni
-            }
-        catch (e2) {
-        try {child.setRelativeHumidity(data.status) // Try Omni 
-            }
-        catch (e) {"Couldn't update humidity $child" + e}
-        }
+        if (child.hasCommand ("setHumidity")) child.setHumidity(data.status) 
+        else if (child.hasCommand ("setRelativeHumidity")) child.setRelativeHumidity(data.status) //  Omni
+        else log("No set humidty command for device $child","WARN")
     }
     else if (evt.value.contains ("temperature"))child.setTemperature(data.status)
     else if (evt.value.contains ("accelertion"))child.setAcceleration(data.status)
@@ -5840,7 +5838,7 @@ window: On means open, Off means closed
 					}
 					}
 			}
-			child.setType(system)  // identify as a discovered device
+			//child.setType(system)  // identify as a discovered device
 		} catch(Exception ex) {
             log ("addChild/topics failed for " + name + " ["+  prefix+name +" ]"  +(ex.toString()), "ERROR")
 		}
