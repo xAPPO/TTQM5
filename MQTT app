@@ -451,8 +451,8 @@ def vMQTT() {
                             if (settings[var]!=data) {
                                 log.debug "  "
                                 log.debug "[$i] UPDATE device $vDev.name - ${atomicState.attList[i]}_Topic"
-                                log.debug "[$i] UPDATING from " + vDev.getDataValue("${atomicState.attList[i]}_Topic") 
-                                vDev.updateDataValue("${atomicState.attList[i]}_Topic", settings[var])
+                                log.debug "[$i] UPDATING from " + vDev.getDataValue("${atomicState.attList[i]}_Topic")
+                                vDev.updateDataValue("${atomicState.attList[i]}_Topic", settings[var].trim())
                                 mqtt.subscribeTopic("${settings[var]}")
                                 log.debug "[$i] UPDATED to ${settings[var]}"
                                 
@@ -463,7 +463,7 @@ def vMQTT() {
                                 log.debug "  "
                                 log.debug "[$i] UPDATE device $vDev.name - ${atomicState.attList[i]}_Cmd"
                                 log.debug "[$i] UPDATING from " + vDev.getDataValue("${atomicState.attList[i]}_Cmd")
-                                vDev.updateDataValue("${atomicState.attList[i]}_Topic", settings[varCmd])
+                                vDev.updateDataValue("${atomicState.attList[i]}_Cmd", settings[varCmd].trim())
                                 log.debug "[$i] UPDATED to ${settings[varCmd]}"
                                 log.debug "  "
                             }
@@ -497,7 +497,7 @@ def vMQTT() {
                                     }
                                 }
                                          }
-                                if (i>0) log.warn "Several state topics for $vDev"
+                                if (i>0) log.debug ("Several state topics for $vDev")//,"WARN")
                             }
                             defTwo=vDev.getDataValue("${atomicState.attList[i]}_Cmd")                        
                             input(name: var, type: "text", defaultValue: defOne,title: "<b> ${atomicState.attList[i]} </b> MQTT status topic", description: null, multiple: false, required: false, submitOnChange: true)
@@ -960,12 +960,12 @@ def initialize() {
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$state','init',1,true,settings?.minHomie)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$homie','3.0.1',1,true,settings?.minHomie) 
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$implementation','groovy:uk.co.ukusa.mqtt',1,true,settings?.minHomie)
-		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$fw/version','5 pre 5h',1,true)
+		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$fw/version','5 pre 5i',1,true)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$fw/name','alpha',1,true)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$name',settings?.hubName,1,true)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$mac','BB:AA:DD:AA:55:55',1,true,settings?.minHomie)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$localip','1.2.3.4',1,true,settings?.minHomie)
-		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$implementation/version','alpha5 pre 5h',1,true)
+		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$implementation/version','alpha5 pre 5i',1,true)
         if (modes) currentMode()
 	}
 	mqtt.setStateVar("logLevel",determineLogLevel(settings?.logging ?: "INFO"))
@@ -2123,7 +2123,7 @@ def HADiscoveryAdvertise (name, type="none", category="none", id='0', payON="tru
         pID=''
     String ID = "${id}"
     if (ID != '0') {
-        pID= ',"device": {"identifiers": "HE_'+ ID + '","name": "'+name+ '","sw_version":"alpha 5 pre 5e","model":"'+"${atomicState.normHubName}"+'","manufacturer":"Hubitat"}'  // TODO Investigate if this can work
+        pID= ',"device": {"identifiers": "HE_'+ ID + '","name": "'+name+ '","sw_version":"alpha 5 pre 5i","model":"'+"${atomicState.normHubName}"+'","manufacturer":"Hubitat"}'  // TODO Investigate if this can work
     }
 
   
@@ -4219,14 +4219,17 @@ def LookupManual(evt) {
             if (it.deviceNetworkId=="MQTT:virtual_"+deviceID){
                 devType=it.getTypeName()
                 log ("Virtual device found via DNI Lookup $it $devType", "INFO")
-                if (devType.contains("Sensor"))
-                {
-                    log ("Virtual Sensor match for $it","TRACE")
-                    sensorAction (it, devType,evt.value)
                 device=it
                 found=true 
-                return  // Is there anything more to do below ?
-            }
+                if (devType.contains("Sensor")){
+                    log ("Virtual Sensor match for $it","TRACE")
+                    sensorAction (it, devType,evt.value)   
+                    return  // Is there anything more to do below ?
+               }
+                else {
+                    if (it.hasCommand ("on")) onoffDevice=true
+                    if (it.hasCommand ("setLevel")) dimDevice=true 
+                }
         }
         }  
         
@@ -4472,14 +4475,14 @@ if (devType=="manual" && !onoffdevice && !dimdevice) {    // we are going to hav
 		
 		if (onoffDevice)  
 		{
-            log ("Handling ${devType} as onoff", "TRACE")
+            log ("Handling ${devType} $device.name as onoff", "WARN")
 			if (devType=="map") {
-				if (evt.value==LookupID.stateOFF) device.toOFF()
-				else if (evt.value==LookupID.stateON) device.toON()
+				if (evt.value==LookupID.stateOFF) device.off()
+				else if (evt.value==LookupID.stateON) device.on()
 			}
             else if (devType=="virtual") {
-				if (evt.value==valOFF) device.toOFF()
-				else if (evt.value==valON) device.toON()
+				if (evt.value==valOFF) device.off()
+				else if (evt.value==valON) device.on()
 			}
 			else {  // will have to surmise state required
 				log ("Surmising required state [" +evt.value+"] for " + device.name,"DEBUG")
@@ -4488,15 +4491,8 @@ if (devType=="manual" && !onoffdevice && !dimdevice) {    // we are going to hav
 			if (device.currentValue('stateOFF')!=null) OffValues=device.currentValue('stateOFF')
 			else OffValues="off,Off,OFF,false,False,FALSE,no,No,NO,0"
 				//if (OnValues.contains(evt.value.toLowerCase()))
-                if (OnValues.contains(evt.value))
-				{
-					if (devType == "system") device.on() else device.toON()  //toON is for my MQTT virtuals - will deprecate
-				}
-				//else if (OffValues.contains(evt.value.toLowerCase()))
-                else if (OffValues.contains(evt.value))
-				{
-					if (devType == "system") device.off() else device.toOFF()  //toOFF is for my MQTT virtuals - will deprecate
-				}
+                if (OnValues.contains(evt.value) )device.on()
+                else if (OffValues.contains(evt.value)) device.off()
 				else log ("Unknown state value " + evt.value +" - need to add in device settings (or lookup)","WARN")	
 				}
 			}
@@ -4505,7 +4501,7 @@ if (devType=="manual" && !onoffdevice && !dimdevice) {    // we are going to hav
 	
 		if (dimDevice) {
 			//if (devType=="dim") {
-				 log ("Handling as dim", "TRACE")
+				 log ("Handling $device.name as dim", "TRACE")
 				 try {  // see if its numeric  // LookupLevel should be valid
 					float convertedNumber = Float.parseFloat(evt.value)  // TODO messy and repeatedly used
                      vDev=false
@@ -4524,8 +4520,9 @@ if (devType=="manual" && !onoffdevice && !dimdevice) {    // we are going to hav
 						intLevel = convertedNumber = convertedNumber.round()
 						adjLevel=intLevel.toString()
 						log ( " The numeric payload for " + device.name + " was converted from " + evt.value + " to " + adjLevel, "DEBUG")
-						if (vDev) device.setLevel(intLevel,1)
-                        else device.toLevel(adjLevel,1) 
+						//if (vDev) device.setLevel(intLevel,1)
+                        device.setLevel(intLevel,1)
+                        //else device.toLevel(adjLevel,1) 
 					}
 			}
 			catch (Exception e1) {
@@ -6019,6 +6016,7 @@ Sensors check over
 Ongoing .. customisation of topic names/states
 Review TODOs in code
 Color hsv not settable from Hubitat topic
+
 
 ISSUES:
 Not removing devices when disabled
