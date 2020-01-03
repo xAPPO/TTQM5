@@ -6020,7 +6020,6 @@ Ongoing .. customisation of topic names/states
 Review TODOs in code
 Color hsv not settable from Hubitat topic
 
-
 ISSUES:
 Not removing devices when disabled
 Currently adding devices to publish from HE > MQTT needs restart of app to add to HA discovery and state announcement on MQTT
