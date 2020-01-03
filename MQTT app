@@ -392,7 +392,7 @@ def vMQTT() {
                     temp=atomicState.attList.sort()
                     atomicState.attList=temp
                     //input(name: "atts", type: "enum", title: "Device atomic Attributes",description: null, multiple: false, required: false, submitOnChange: true, options: atomicState.attList)
-                    input(name: "dMode", type: "enum", title: "Method to add device attribute topics",description: null, multiple: false, required: true, submitOnChange: true, options: ["Manual", "Assisted from MQTT", "Create new device"]) 
+                    input(name: "dMode", type: "enum", title: "Method to add device attribute topics",description: null, defaultValue: "Manual", multiple: false, required: true, submitOnChange: true, options: ["Manual", "Assisted from MQTT"]) //, "Create new device"]) 
                     if (dMode=="Assisted from MQTT") assisted=true else assisted=false
                     if (assisted) input (name: "devWildcard", type: "text", title: "Please enter a wildcarded topic encompassing the whole device but no others", submitOnChange: true)
                     if ((assisted) && (devWildcard != null)) {
@@ -570,7 +570,9 @@ def vMQTT() {
         
         
             else
+                if ($vDev!=null){
                 section (title: "This device <b> $vDev </b> is not enabled on MQTT") {       
+                }
                 }
         } // end dynamic page            
         
@@ -958,12 +960,12 @@ def initialize() {
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$state','init',1,true,settings?.minHomie)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$homie','3.0.1',1,true,settings?.minHomie) 
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$implementation','groovy:uk.co.ukusa.mqtt',1,true,settings?.minHomie)
-		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$fw/version','5 pre 5g',1,true)
+		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$fw/version','5 pre 5h',1,true)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$fw/name','alpha',1,true)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$name',settings?.hubName,1,true)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$mac','BB:AA:DD:AA:55:55',1,true,settings?.minHomie)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$localip','1.2.3.4',1,true,settings?.minHomie)
-		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$implementation/version','alpha5 pre 5g',1,true)
+		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$implementation/version','alpha5 pre 5h',1,true)
         if (modes) currentMode()
 	}
 	mqtt.setStateVar("logLevel",determineLogLevel(settings?.logging ?: "INFO"))
@@ -1068,6 +1070,8 @@ def initialize() {
             abort(6)
             return
     }
+    
+    subscribeVirtuals()  // this subscribes to any adhoc virtuals we have created
     
 /*
 	if(settings?.HAStatestream){
@@ -1754,11 +1758,15 @@ def clearRestart() {
 
 def synchDevices(evt) {
     log ("Resynch MQTT device states and HA discovery topics","INFO")
+    publishList=[:]
     
     MQTTRGB = (settings?.colour)  //separate as extra values
         count=0
         if (MQTTRGB != null){
-        MQTTRGB.each { 
+        MQTTRGB.each {
+            if (settings?.HADiscovery && (!publishList.containsKey(myName))) {
+                publishList.put(it.id,[myName,"light","colour"])
+            }
 			mydName = it.name
 			myName = it.displayName
 		    //for (String item : MQTTRGB) {
@@ -1783,6 +1791,9 @@ def synchDevices(evt) {
                 
         count=0
         MQTTRGBT.each { 
+            if (settings?.HADiscovery && (!publishList.containsKey(myName))){
+                publishList.put(it.id,[myName,"light","colour"])
+            }
        
 			mydName = it.name
 			myName = it.displayName
@@ -1888,8 +1899,11 @@ def synchDevices(evt) {
     devLoop (settings?.thermostats,"supportedThermostatFanModes","thermostatDevices","thermostatFanModes")
     devLoop (settings?.thermostats,"supportedNestThermostatFanModes","thermostatDevices","thermostaFantModes")
     devLoop (settings?.thermostats,"thermostatOperatingState","thermostatDevices")
-
-	
+    // Just playing with PublishList here 
+	if (publishList.size() != 0) {
+    log(">>>>>>>>>>>>>>>>>>>>>   Publish List is $publishList","TRACE") 
+    //publishList.each {k, v -> HADiscoveryAdvertise(v[0],v[1],v[2], k) }
+    }
 }
 
 
@@ -2086,6 +2100,10 @@ def topicPayload(evt) {
 
 def HADiscoveryAdvertise (name, type="none", category="none", id='0', payON="true",payOFF="false",nameSuffix='',UOM='') {  // payON and payOFF vary a lot for sensors so need extra params) {
     if (!settings?.HADiscovery) return   // && HAtype!='?')
+    if (category=='block'){
+        log.debug "Blocking advertising dimmer $name as a switch to HA "
+        return
+    }
 	normName = normalize(name+nameSuffix) 
 	log ("Advertising ${name} device ${type} ${category} to HA with ID $id","DEBUG")
     if (id==0) log.debug "The ID for device $name $type was 0"
@@ -2353,6 +2371,17 @@ def subscribeHomieTopic() {
 	mqtt.subscribeTopic('homie/'+atomicState.homie+'/+/$type')      //TODO from here could get a device > type list as this returns all devices with a type
 }
 
+def subscribeVirtuals() {
+            getChildDevices().each {                
+                if (it.getDataValue("origin") == "user") {
+                    myData=it.getData()
+                    if (myData != null) myData.each {
+                        if (it.key.endsWith("_Topic")) mqtt.subscribeTopic(it.value)
+                    }
+                } 
+            }    
+}
+
 def subscribeHomieStateTopics() {
 	log ("Adding homie onoff & dim events subscription topics ", "INFO")
 	mqtt.subscribeTopic('homie/'+atomicState.homie+'/+/onoff')
@@ -2589,7 +2618,7 @@ def switchedDim(evt, name=null, type=null, state=null,id=0) {  // why do we pass
     checkNodes(2, name) 
 	if (settings?.HADiscovery){
 		if (evt==null) {  // this will limit HADiscovery to startup or 'upon request' for devices
-		HADiscoveryAdvertise(name,"switch","none",id)
+		HADiscoveryAdvertise(name,"switch","block",id)
 		}
 		else if (settings?.HADiscovery) log ("HADiscovery switchedDim discarded for ${name}","DEBUG")
 	}
@@ -4182,7 +4211,25 @@ def LookupManual(evt) {
                       }
                   }                                
                } 
-            }   
+            }
+    }
+    
+    if (!found) {
+        getChildDevices().each { 
+            if (it.deviceNetworkId=="MQTT:virtual_"+deviceID){
+                devType=it.getTypeName()
+                log ("Virtual device found via DNI Lookup $it $devType", "INFO")
+                if (devType.contains("Sensor"))
+                {
+                    log ("Virtual Sensor match for $it","TRACE")
+                    sensorAction (it, devType,evt.value)
+                device=it
+                found=true 
+                return  // Is there anything more to do below ?
+            }
+        }
+        }  
+        
     }
 		
 	// should be found later by deviceNetworkID lookup (below)
@@ -4290,7 +4337,6 @@ def LookupManual(evt) {
 				//TODO exit loop on match or match multiple ? - currently matching last
                 found=true
 			}
-
             else log ("Not found as a RealVirtual: " + item, "TRACE")
 			index++
 		}
@@ -4620,7 +4666,7 @@ def dimEvent (evt) {
 
 def sensorEvent(evt) {
 	def data = parseJson(evt.data)
-    log ("Received a sensor event from ${evt.value} level ${data.status}", "INFO")
+    log ("Received a sensor event from ${evt.value} level ${data.status}", "DEBUG")
 	child=getChildDevice("MQTT:homie_"+evt.value)
 	if (child==null) {
 		//log ("getChild failed for " + evt.value, "WARN")
@@ -4629,7 +4675,12 @@ def sensorEvent(evt) {
 			//log ("getChild failed for " + evt.value, "WARN")
 			return
 		}	
-	}
+	}   
+    sensorAction(child, evt.value,data.status)
+}
+    
+def sensorAction(child,devType,val) {
+    devType=devType.toLowerCase()
     attList=child.getSupportedAttributes()
     log  ("Got " + child + " [" + + attList.size() + "] " + child.getSupportedAttributes(), "DEBUG")
     if (attList.size()>1){
@@ -4638,23 +4689,50 @@ def sensorEvent(evt) {
     }
     attName = attList[0]
     if (attList.size()>1){log.info "Looking here for $attName"}
-    if (evt.value.contains ("humidity")){
-        if (child.hasCommand ("setHumidity")) child.setHumidity(data.status) 
-        else if (child.hasCommand ("setRelativeHumidity")) child.setRelativeHumidity(data.status) //  Omni
-        else log("No set humidty command for device $child","WARN")
+    
+    if (devType.contains ("humidity")){
+        if (child.hasCommand ("setHumidity")) child.setHumidity(val)
+        else if (child.hasCommand ("setRelativeHumidity")) child.setHumidity(val)
     }
-    else if (evt.value.contains ("temperature"))child.setTemperature(data.status)
-    else if (evt.value.contains ("accelertion"))child.setAcceleration(data.status)
-    else if (evt.value.contains ("carbonDioxide"))child.setCarbonDioxed(data.status)
-    else if (evt.value.contains ("carbonMonoxide"))child.setCarbonMonoxide(data.status)
-    else if (evt.value.contains ("contact"))child.setContact(data.status)
-    else if (evt.value.contains ("illuminance"))child.setIlluminance(data.status)
-    else if (evt.value.contains ("motion"))child.setMotion(data.status)
-    else if (evt.value.contains ("presence"))child.setPresence(data.status)
-    else if (evt.value.contains ("smoke"))child.setSmoke(data.status)
-    else if (evt.value.contains ("water"))child.setVariable(data.status)
+    else if (devType.contains ("temperature"))child.setTemperature(val)
+    else if (devType.contains ("accelertion"))child.setAcceleration(val)  // AccelerationActive   AccelerationInactive
+    else if (devType.contains ("carbonDioxide"))child.setCarbonDioxide(val)
+    else if (devType.contains ("carbonMonoxide"))child.setCarbonMonoxide(val)
+    else if (devType.contains ("illuminance"))child.setIlluminance(val)
+          // setEnergy
+          // setPower  
+        
+
+
+    else if (devType.contains ("water")){
+        if (child.getDataValue("water_ON") == val) child.wet()
+        else if(child.getDataValue("water_OFF") == val) child.dry()
+ 
+    }        
+    else if (devType.contains ("presence")){
+        if (child.getDataValue("presence_ON") == val) child.arrived()
+        else if(child.getDataValue("presence_OFF") == val) child.departed() 
+
+    }
+    else if (devType.contains ("smoke")){
+        if (child.getDataValue("smoke_ON") == val) child.smokeDetected()
+        else if(child.getDataValue("smoke_OFF") == val) child.smokeClear() 
+    }
+    else if (devType.contains ("motion")){
+        if (child.getDataValue("motion_ON") == val) child.active()
+        else if(child.getDataValue("motion_OFF") == val) child.inactive() 
+    }
+    else if (devType.contains ("contact")){
+        if (child.getDataValue("contact_ON") == val) child.open()
+        else if(child.getDataValue("contact_OFF") == val) child.close() 
+    }
+        
+        // COClear CODetected
+
+                
     // pressure will go into variable
-    else log ("Sensor not handled specifically yet with name $evt.value and value $data.status","WARN")
+    //else log ("Sensor not handled specifically yet with name $evt.value and value $data.status","WARN")
+    else log ("Sensor not handled specifically yet with name $child and value $devType","WARN")
 }
 
 def binarySensorEvent(evt) {
