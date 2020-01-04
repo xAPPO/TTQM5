@@ -2556,7 +2556,7 @@ def switched(evt, name=null, type=null, state=null,id=0) {
 	else 
 	{
 		xName=name
-		log(" Device (synch) is switched ${state}  ${name} ${xName}", "ERROR")
+		//log(" Device (synch) is switched ${state}  ${name} ${xName}", "DEBUG")
 	}
 	if (settings?.HEBasic)
 		{
@@ -2597,7 +2597,7 @@ def switchedDim(evt, name=null, type=null, state=null,id=0) {  // why do we pass
 		name=evt.displayName
 		state=evt.value
 		xName=evt.name
-		log("Device is SwitchedDim ${state}  ${name} ${xName}", "WARN")
+		log("Device is SwitchedDim ${state}  ${name} ${xName}", "DEBUG")
         if (atomicState.lastDev== "$name [$state]")   atomicState.lastDev=''
         else {
             cTopic=evt.device.getDataValue("switch_Cmd")
