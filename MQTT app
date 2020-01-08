@@ -2389,8 +2389,7 @@ def start_HADiscovery(evt){
          mqtt.subscribeTopic ('homie/development/$fw/version')  //using this to as it returns after all other messages have arrived so know done
     }
     }
-    if((evt!=null)&&(evt.value=="complete"))  
-    {
+    else if(evt.value=="complete") { 
         if (settings?.homieDiscovery)  log ("<b style = 'color: blue'>============   HA Discovery has completed   =============</b>","INFO")
         devSummary()
     }
@@ -5122,9 +5121,13 @@ def cmdEvent (evt) {  // 'set' command from homie for a Hubitat or manual device
 		MQTTlocks = (settings?.locks)
 		log ("Lock Lookup for  "+  evt.value + " is " + matchName + " [" + atomicState.nameMap[index] +"] ","TRACE")
 		MQTTlocks.each {   // This is awful - looping through - do it the other way
-			if (it.displayName==matchName)device=it   	
+            if (it.displayName==matchName) {
+                device=it
+                found=true
+            }
 		    }
         }
+        if (found) {
         	    // DUPLICATED TODO combine this as one method for all
 				log ("Surmising required state [" +data.state+"] for " + evt.value,"DEBUG")
 				LockValues="true"
@@ -5144,19 +5147,24 @@ def cmdEvent (evt) {  // 'set' command from homie for a Hubitat or manual device
                     }
 				}
 				else log ("Unknown state value " + data.state +" - need to add to lookup","WARN")
+        }
     } 
 //Casey >   
     
     
-    	else if (data.cmd=="contact") {
+    else if (data.cmd=="contact") {
             if (!found) {
 		        MQTTgarage = (settings?.garagedoors)
 		        log ("Garage Door Lookup for  "+  evt.value + " is " + matchName + " [" + atomicState.nameMap[index] +"] ","ERROR")
                  MQTTgarage.each {
                     // This is awful - looping through - do it the other way           
-			    if (it.displayName==matchName) device=it
+                     if (it.displayName==matchName){
+                         device=it
+                         found=true
+                     }
                 }
             }
+            if (found) {
             	// DUPLICATED TODO combine this as one method for all
 				log ("Surmising required state [" +data.state+"] for " + evt.value,"DEBUG")
 				CloseValues="close"
@@ -5164,27 +5172,31 @@ def cmdEvent (evt) {  // 'set' command from homie for a Hubitat or manual device
 				if (CloseValues.contains(data.state.toLowerCase()))
 				{
 					//if (devType == "system")
-					it.close()  // think can only be a system type here
+					device.close()  // think can only be a system type here
 					//else device.toON()
 				}
 				else if (OpenValues.contains(data.state.toLowerCase()))
 				{
                     //if (settings?.allowMqttUnlock) {
-					    it.open() // think can only be a system type here                    
+					    device.open() // think can only be a system type here                    
                    // } else {
                    //     log ("To enable MQTT unlock, you must enable in MQTT app settings 'configuration'","WARN")
                    // }
 				}
 				else log ("Unknown state value " + data.state +" - need to add to lookup","WARN")
-	
+           }
             
-                if (!found) {
+           if (!found) {
                     MQTTwindow = (settings?.windowshades)
 		            log ("Window Shade Lookup for  "+  evt.value + " is " + matchName + " [" + atomicState.nameMap[index] +"] ","ERROR")
                     MQTTwindow.each {   // This is awful - looping through - do it the other way           
-			        if (it.displayName==matchName) device=it
+                        if (it.displayName==matchName) {
+                            device=it
+                            found=true
+                        }
                     }
                 }
+            if (found) {
 				// DUPLICATED TODO combine this as one method for all
 				log ("Surmising required state [" +data.state+"] for " + evt.value,"DEBUG")
 				CloseValues="close"
@@ -5192,29 +5204,33 @@ def cmdEvent (evt) {  // 'set' command from homie for a Hubitat or manual device
 				if (CloseValues.contains(data.state.toLowerCase()))
 				{
 					//if (devType == "system")
-					it.close()  // think can only be a system type here
+					device.close()  // think can only be a system type here
 					//else device.toON()
 				}
 				else if (OpenValues.contains(data.state.toLowerCase()))
 				{
                     //if (settings?.allowMqttUnlock) {
-					    it.open() // think can only be a system type here                    
+					    device.open() // think can only be a system type here                    
                    // } else {
                    //     log ("To enable MQTT unlock, you must enable in MQTT app settings 'configuration'","WARN")
                    // }
 				}
 				else log ("Unknown state value " + data.state +" - need to add to lookup","WARN")
 		}
+    }
  
 	else if (data.cmd=="onoff" || data.cmd=="switch") {  // TODO convert to select / case   'switch' comes from RGB devices
         if (!found){
             MQTTswitches = (settings?.switches)
 		    log ("Switch Lookup for  "+  evt.value + " is " + matchName + " [" + atomicState.nameMap[index] +"] ","TRACE")
 		    MQTTswitches.each {   // This is awful - looping through - do it the other way		
-			    if (it.displayName==matchName)device=it 
+                if (it.displayName==matchName) {
+                    device=it 
+                    found=true
+                }
             }
         }
-            
+        if (found)   { 
 				// DUPLICATED TODO combine this as one method for all
 				log ("Surmising required state [" +data.state+"] for " + evt.value,"DEBUG")
 				OnValues="on,true,yes,1"  
@@ -5232,17 +5248,20 @@ def cmdEvent (evt) {  // 'set' command from homie for a Hubitat or manual device
 					//else device.toOFF()
 				}
 				else log ("Unknown state value " + data.state +" - need to add to lookup","WARN")	
-
+        }
 	
         if (!found) {			
-		MQTTdimmers = (settings?.dimmers)
-		log ("Dimmer Lookup for  "+  evt.value + " is " + matchName + " [" + atomicState.nameMap[index] +"] ","TRACE")
-		MQTTdimmers.each {  // This is awful - looping through - do it the other way
-			if (it.displayName==matchName) device=it
+			MQTTdimmers = (settings?.dimmers)
+			log ("Dimmer Lookup for  "+  evt.value + " is " + matchName + " [" + atomicState.nameMap[index] +"] ","TRACE")
+			MQTTdimmers.each {  // This is awful - looping through - do it the other way
+				if (it.displayName==matchName) {
+                device=it
+                found=true
+            }
 			// TODO combine this below as one method for all
             }
         }
-    
+        if (found) {
 				log ("Surmising required state [" +data.state+"] for " + evt.value,"DEBUG")
 				OnValues="on,true,yes,1"  
 				OffValues="off,false,no,0"
@@ -5259,15 +5278,19 @@ def cmdEvent (evt) {  // 'set' command from homie for a Hubitat or manual device
 					//else device.toOFF()
 				}
 				else log ("Unknown state value " + data.state +" - need to add to lookup","WARN")
-
-		
-    if (!found) {
-		MQTTRGB = (settings?.colour)
-		// log ("ColourC Lookup for  "+  evt.value + " is " + matchName + " [" + atomicState.nameMap[index] +"] ","TRACE")
-		MQTTRGB.each {  // This is awful - looping through - do it the other way
-		    if (it.displayName==matchName) device=it
         }
-    }    
+		
+		if (!found) {
+			MQTTRGB = (settings?.colour)
+			// log ("ColourC Lookup for  "+  evt.value + " is " + matchName + " [" + atomicState.nameMap[index] +"] ","TRACE")
+			MQTTRGB.each {  // This is awful - looping through - do it the other way
+				if (it.displayName==matchName) {
+					device=it
+					found=true
+				}
+			}
+		} 
+        if (found) {
 			// TODO combine this below as one method for all
 				log ("Surmising required state [" +data.state+"] for " + evt.value,"DEBUG")
 				OnValues="on,true,yes,1"  
@@ -5285,16 +5308,20 @@ def cmdEvent (evt) {  // 'set' command from homie for a Hubitat or manual device
 					//else device.toOFF()
 				}
 				else log ("Unknown state value " + data.state +" - need to add to lookup","WARN")
-			
+        }	
 		
 // TODO Think this can be ignore FTTB as it is a near duplicate in terms of lookup	
         if (!found){
-        MQTTRGBT = (settings?.colourT)
-    	log ("ColourT Lookup for  "+  evt.value + " is " + matchName + " [" + atomicState.nameMap[index] +"] ","TRACE")
-		MQTTRGBT.each {   // This is awful - looping through - do it the other way
-		if (it.displayName==matchName) device=it
+			MQTTRGBT = (settings?.colourT)
+			log ("ColourT Lookup for  "+  evt.value + " is " + matchName + " [" + atomicState.nameMap[index] +"] ","TRACE")
+			MQTTRGBT.each {   // This is awful - looping through - do it the other way
+				if (it.displayName==matchName){
+					device=it
+					found=true
+				}    
+			}
         }
-        }
+        if (found) {
 			// TODO combine this below as one method for all
 				log ("Surmising required state [" +data.state+"] for " + evt.value,"DEBUG")
 				OnValues="on,true,yes,1"  
@@ -5312,7 +5339,8 @@ def cmdEvent (evt) {  // 'set' command from homie for a Hubitat or manual device
 					//else device.toOFF()
 				}
 				else log ("Unknown state value " + data.state +" - need to add to lookup","WARN")
-}
+    }
+    }
 
 	
 	else if (data.cmd=="dim") {
@@ -5379,20 +5407,20 @@ def cmdEvent (evt) {  // 'set' command from homie for a Hubitat or manual device
                         HSL.put('hue',HSV[0].toInteger())
                         HSL.put('saturation',HSV[1].toInteger())
                         HSL.put('level',HSV[2].toInteger())
-                        it.setColor(HSL)
-                        //it.setColor(HSV)
+                        device.setColor(HSL)
+                        //device.setColor(HSV)
                         return
                     }
 					float Rtemp= Float.parseFloat(data.state)/3.6
 					int hue = Math.round (Rtemp)  // 0-360
-                    it.setHue(hue)  // 0-100
+                    device.setHue(hue)  // 0-100
                    // int sat = hue
 					if (data.payload.size()>1) {
 						Rtemp= Float.parseFloat(data.payload[1])/1.0
 						int sat = Math.round (Rtemp)
                         pauseExecution(5000)  //   really !!!! TODO Look at why I did this
-                        it.setSaturation(sat)  // 0-100
-						//it.setSaturation(sat)  // 0-100
+                        device.setSaturation(sat)  // 0-100
+						//device.setSaturation(sat)  // 0-100
 					}
 					
                         //it.setHue(hue)
@@ -5400,8 +5428,8 @@ def cmdEvent (evt) {  // 'set' command from homie for a Hubitat or manual device
                         HSL.put('hue',hue.toInteger())
                         HSL.put('saturation',sat)
                         HSL.put('level',50)
-                        it.setColor(HSL)
-                    //it.setHue(hue)  // 0-100
+                        device.setColor(HSL)
+                    //device.setHue(hue)  // 0-100
 				}
     if (!found) {   
         	MQTTRGB = (settings?.colourT)  // Absolute duplicate of above except for colourT - fix TODO
@@ -5425,12 +5453,12 @@ def cmdEvent (evt) {  // 'set' command from homie for a Hubitat or manual device
                         HSL.put('level',HSV[2].toInteger())
                                                
 //log.error "HSV is ${HSV}      ${HSV.hue} ${HSV.saturation} ${HSV.value}"
-                         it.setColor(HSL)
-                        //it.setColor([HSV])
+                         device.setColor(HSL)
+                        //device.setColor([HSV])
 //log.error "SetColor RGBWT" + HSV + "   " + HSL
-                       // it.setSaturation(HSV.saturation.toInteger())
-					   // it.setHue(HSV.hue.toInteger())
-					   // it.setLevel(HSV.value.toInteger())
+                       // device.setSaturation(HSV.saturation.toInteger())
+					   // device.setHue(HSV.hue.toInteger())
+					   // device.setLevel(HSV.value.toInteger())
                         RGB=hubitat.helper.ColorUtils.hsvToRGB(HSV)
 //log.error "Returned RGB is ${RGB}"
                         return
@@ -5440,7 +5468,7 @@ def cmdEvent (evt) {  // 'set' command from homie for a Hubitat or manual device
 					if (data.payload.size()>1) {
 						Rtemp= Float.parseFloat(data.payload[1])
 						int sat = Math.round (Rtemp)
-						it.setSaturation(sat)  // 0-100
+						device.setSaturation(sat)  // 0-100
 					}
 					device.setHue(hue)
 				}
@@ -5512,7 +5540,7 @@ def cmdEvent (evt) {  // 'set' command from homie for a Hubitat or manual device
                 }
             }
         }
-		if (found) setColorTemperature (data.state.toInteger())	
+		if (found) device.setColorTemperature (data.state.toInteger())	
 	}
 	else if (data.cmd=="color-temperature") {  // This is from the homie topic                           //TOD these on homie are normalised names - need to match as such i.e. as in thermostats below TODO BUG ??
         if (!found) {
@@ -5578,8 +5606,10 @@ def cmdEvent (evt) {  // 'set' command from homie for a Hubitat or manual device
          else log ("No matching thermostat found for command ${data.cmd} for ${evt.value}", "WARN")
       
     }
+	
     else if (data.cmd=="securitymode"){
         if (data.state=='----') return
+		if (!found) {
     	Keypads = (settings?.keypads)
 			Keypads.each {
 // >> @ jwilliams
@@ -5592,6 +5622,12 @@ def cmdEvent (evt) {  // 'set' command from homie for a Hubitat or manual device
 				if (it.displayName==matchName) {
 				    log ("Got Device for ${matchName}", "DEBUG")
 					setStatus = ""
+					found=true
+					device=it
+				}
+			}
+		}
+		if (found) {
 				    
 					ArmValues="armed night, armed home, armed away"
                     if (ArmValues.contains(data.state.toLowerCase())) {		
@@ -5614,10 +5650,10 @@ def cmdEvent (evt) {  // 'set' command from homie for a Hubitat or manual device
 				    } 
 				    
 				    log ("Setting Status to ${setStatus}","DEBUG")	    
-                    if (setStatus=='armed night') it.armNight()
-                    else if (setStatus=='armed home') it.armHome()
-                    else if (setStatus=='armed away') it.armAway()
-                    else if (setStatus=='disarm') it.disarm()                
+                    if (setStatus=='armed night') device.armNight()
+                    else if (setStatus=='armed home') device.armHome()
+                    else if (setStatus=='armed away') device.armAway()
+                    else if (setStatus=='disarm') device.disarm()                
 // << @jwilliams             
                     else {
                         // String code = it.currentLockCodes.toString()
@@ -5625,11 +5661,11 @@ def cmdEvent (evt) {  // 'set' command from homie for a Hubitat or manual device
                         //if (code.contains(':"' + data.state + '"}')) it.disarm()
                         //if (code.contains('{"name":"MQTT","code":"'+data.state+'"}')) it.disarm()
                     }
-				}
-			}
+				
+		}
     }
     
-   else if (data.cmd=="variable"){
+   else if (data.cmd=="variable"){  // left untouched re '(found) 
        gVariables =(settings?.gVars)
             gVariables.each {
 				if (normalize(it.displayName)==matchName){
@@ -5645,36 +5681,12 @@ def cmdEvent (evt) {  // 'set' command from homie for a Hubitat or manual device
 
         
     }
- /*   // This needs a different approach
-    else if (data.cmd=="variable"){
-        if (!found){
-           gVariables =(settings?.gVars)
-           gVariables.each {    
-                if (normalize(it.displayName)==matchName) {
-                    device=it
-                    found=true
-                }
-            }
-        }
-        if (found)  device.setVariable (data.state)
 
-    
-     // this ones constructed a bit differently
-       gVariables =(settings?.globVars)
-            gVariables.each {
-
-                if (normalize(it.displayName)==matchName) {
-                    //device=it
-                    //found=true
-                    it.setVariable (data.state)
-                }
-            }      
-    } 
-*/
     
 	else log ("No matching devices with this command available for ${data.cmd} for ${evt.value}", "WARN")
 
 }
+
 
 def extractInt( String input ) {
   return input.replaceAll("[^0-9]", "")
