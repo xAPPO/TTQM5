@@ -71,7 +71,7 @@ def initialize() {
     state.maxComplete=0
 
     
-    version="alpha5 pre 5b"
+    version="alpha5 pre 5c"
     if (state.delay==null) state.delay=250 // inter state.maxImmediate event pacing in mS
 
 //    sendEvent (name: "Status", value: "disconnected" , isStateChange: true)
@@ -209,7 +209,7 @@ def publishMsg(String topic, String payload,int qos = 1, boolean retained = fals
 
 
 def subscribeTopic (String s) {
-	log ("MQTT subscribing to: " + s, "INFO")
+	log ("MQTT subscribing to: " + s, "DEBUG")
     if (state.connected==true){
         interfaces.mqtt.subscribe(s,1)
          sendEvent (name: "Subscribes", value: state.subs++)   
@@ -218,7 +218,7 @@ def subscribeTopic (String s) {
 }
 
 def unsubscribeTopic (String s) {
-	log ("MQTT unsubscribing from: " + s, "INFO")
+	log ("MQTT unsubscribing from: " + s, "DEBUG")
     if (state.connected==true){
         interfaces.mqtt.unsubscribe(s)
          sendEvent (name: "Subscribes", value: --state.subs)   
@@ -228,7 +228,7 @@ def unsubscribeTopic (String s) {
 
 
 def subscribeWildcardTopic (String s) {
-	log ("MQTT subscribing to: " + s, "INFO")
+	log ("MQTT subscribing to: " + s, "DEBUG")
     if (state.connected==true){
         topics=s.split('/')
 	    topicCounts=topics.size()
@@ -297,7 +297,7 @@ def notfoundevt(String s){
 }
 
 def bufferEmpty(i){
-    log  ("MQTT message queue idle","INFO")
+    log  ("MQTT message queue idle","DEBUG")
 }
 
 // Key method Handles all the data back from MQTT subscriptions
@@ -392,7 +392,7 @@ def parse(String description) {
             sequence=state.seq2.toString()
 
 				if (topic[3]=='state'){
-				//log ("RX::Binary Sensor state::  " + topic[2] + " is " + payload[0], "DEBUG")
+				//log ("RX::Binary Sensor state::  " + topic[2] + " is " + payload[0], "TRACE")
 				def evt10 = createEvent(name: "BinarySensor", value: topic[2], data: [status: payload[0],seq: sequence, update: true], isStateChange: true)  //, key2: payload])
 				pause (delay) // pace
                 state.dispatch = now()
@@ -702,7 +702,7 @@ def parse(String description) {
             state.seq2++
             sequence=state.seq2.toString()
 
-		if (topicCount==6) { 
+		if (topicCount==6) {   // rather than these why not just check last topic  - endsWith("/set")
 			if ((topic[5]=="set")&&(topic[4]=="rgb")) {
 				def evt12 = createEvent(name: "Command", value: topic[2], data: [state: payload[0], payload: payload, seq: sequence, cmd: topic[3],topic: interfaces.mqtt.parseMessage(description)], isStateChange: true)
 				log ("Received this " + payload + "  " + payload.size(), "TRACE")
@@ -741,10 +741,10 @@ def parse(String description) {
 			}
             
            if (topic[2]=='$fw') {  // This is a random (non updating) topic used to pace the progress of subscriptions
-            log  ("============ Got an MQTT 'pace' message ", "INFO")
             if (topic[3]=='name') {
-                log  ("============ homie Discovery has completed ============","INFO")
-                log  ("============ Asking HA Discovery to start  ============","INFO")
+                //log ("<b style = 'color: blue'>============ homie Discovery has completed ============</b>","INFO")
+
+                log  ("============ Asking HA Discovery to start  ============","DEBUG")
                 //unsubscribeTopic ('homie/development/$fw/name')
                 
                // def evt99 = createEvent (name: "startHADiscovery", value: "true", data: [seq: sequence], isStateChange: true)
@@ -754,7 +754,7 @@ def parse(String description) {
                 sequence=state.seq2
                 state.dispatch = now()
 */
-                sendEvent(name: "HADiscoverStart", value: 'rubbish',isStateChange: true) 
+                sendEvent(name: "HADiscoverStart", value: 'HAstart',isStateChange: true) 
             }
             else if (topic[3]=='client') {
                 log ("============ Unsubscribing from HA friendly_names ============","INFO")
@@ -768,8 +768,8 @@ def parse(String description) {
             }
             else if (topic[3]=='version') {
 
-                log  ("============  HA Discovery has completed   ============","INFO")
-                //unsubscribeTopic ('homie/development/$fw/client')
+                //log ("<b style = 'color: blue'>============   HA Discovery has completed   =============</b>","INFO")
+                sendEvent(name: "HADiscoverStart", value: 'complete',isStateChange: true) 
 
             }
 
