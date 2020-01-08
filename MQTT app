@@ -2389,7 +2389,7 @@ def start_HADiscovery(evt){
          mqtt.subscribeTopic ('homie/development/$fw/version')  //using this to as it returns after all other messages have arrived so know done
     }
     }
-    if (evt.value=="complete") 
+    if((evt!=null)&&(evt.value=="complete"))  
     {
         if (settings?.homieDiscovery)  log ("<b style = 'color: blue'>============   HA Discovery has completed   =============</b>","INFO")
         devSummary()
