@@ -297,7 +297,7 @@ def notfoundevt(String s){
 }
 
 def bufferEmpty(i){
-    log  ("MQTT message queue idle","DEBUG")
+    log  ("MQTT message queue idle","ERROR")
 }
 
 // Key method Handles all the data back from MQTT subscriptions
@@ -698,7 +698,7 @@ def parse(String description) {
 	
 	
 	else if (topic[0]=="homie" && topic[1]== "${state.normHubName}"){ //local - look for incoming 'set' commands that control Hubitat devices here
-        log ("Received this message from homie " + topic + " " + payload, "WARN")
+        log ("Received this message from homie " + topic + " " + payload, "TRACE")
             state.seq2++
             sequence=state.seq2.toString()
 
@@ -758,7 +758,7 @@ def parse(String description) {
             }
             else if (topic[3]=='client') {
                 log ("============ Unsubscribing from HA friendly_names ============","INFO")
-                unsubscribeTopic ('homie/development/$fw/client')
+                unsubscribeTopic ('homie/'+state.normHubName+'/$fw/client')
 /*
                 state.seq2++
                 sequence=state.seq2
