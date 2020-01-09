@@ -2359,7 +2359,7 @@ def subscribeHomieStateTopics() {
 def subscribeHomieNameTopics() {
 	log ("Adding homie name subscription topics ", "INFO")  // This is the last homie subscription
 	mqtt.subscribeTopic('homie/'+atomicState.homie+'/+/$name')
-    mqtt.subscribeTopic ('homie/development/$fw/name')  //using this as it returns after all other messages have arrived so know done
+    mqtt.subscribeTopic ('homie/'+atomicState.homie+'/$fw/name')  //using this as it returns after all other messages have arrived so know done
     // removed immediate unsubscribe
 }
 
@@ -2373,7 +2373,7 @@ def start_HADiscovery(evt){
 	//mqtt.subscribeTopic('homie/'+atomicState.homie+'/+/$properties')   // Not subscribed currently
 	mqtt.unsubscribeTopic('homie/'+atomicState.homie+'/+/$type')     
     }
-    //mqtt.subscribeTopic ('homie/development/$fw/name')
+    //mqtt.subscribeTopic ('homie/'+atomicState.homie+'/$fw/name')
     log ("Starting HA Discovery","INFO")
     	if(settings?.HAStatestream){
 		log ("HA stateStream enabled", "INFO")
@@ -2386,11 +2386,11 @@ def start_HADiscovery(evt){
 	}
     else {
         log ("Skipping HA stateStream MQTT discovery", "INFO")
-         mqtt.subscribeTopic ('homie/development/$fw/version')  //using this to as it returns after all other messages have arrived so know done
+         mqtt.subscribeTopic ('homie/'+atomicState.homie+'/$fw/version')  //using this to as it returns after all other messages have arrived so know done
     }
     }
     else if(evt.value=="complete") { 
-        if (settings?.homieDiscovery)  log ("<b style = 'color: blue'>============   HA Discovery has completed   =============</b>","INFO")
+        if (!settings?.homieDiscovery)  log ("<b style = 'color: blue'>============   HA Discovery has completed   =============</b>","INFO")
         devSummary()
     }
     
@@ -2418,7 +2418,7 @@ def subscribeHADevices() {  // ToDo - these might benefit from pacing
     mqtt.subscribeTopic(atomicState.HA+'/device_tracker/+/friendly_name')
     mqtt.subscribeTopic(atomicState.HA+'/climate/+/friendly_name')
     mqtt.subscribeTopic(atomicState.HA+'/lock/+/friendly_name')
-    mqtt.subscribeTopic ('homie/development/$fw/client') // this will run when all the friendly names have arrived
+    mqtt.subscribeTopic ('homie/'+atomicState.homie+'/$fw/client') // this will run when all the friendly names have arrived
         
     // Currently not discovering these :   
     //mqtt.subscribeTopic(atomicState.HA+'/automation/+/friendly_name')
@@ -2485,7 +2485,7 @@ def subscribeHADeviceEvents() {// This runs 10 secs after above currently
     mqtt.subscribeTopic(atomicState.HA+'/person/+/state')
     mqtt.subscribeTopic(atomicState.HA+'/cover/+/state')
     mqtt.subscribeTopic(atomicState.HA+'/cover/+/current_position')
-    mqtt.subscribeTopic ('homie/development/$fw/version')  //using this to as it returns after all other messages have arrived so know done
+    mqtt.subscribeTopic ('homie/'+atomicState.homie+'/$fw/version')  //using this to as it returns after all other messages have arrived so know done
     // Currently not handling state updates for these :   
     //mqtt.subscribeTopic(atomicState.HA+'/automation/+/state')
     //mqtt.subscribeTopic(atomicState.HA+'/climate/+/state')
@@ -3455,8 +3455,9 @@ def colourDevices(evt, name=null,type=null, state=null, id=0) {
 		xType=evt.name  // this is the attribute name
 		log ("Got a colour event " + evt.name + " " + evt.value, "INFO")
         if (atomicState.lastDev== "$name [$state]")   atomicState.lastDev=''
+        // devType=device.getTypeName()
         else {
-            cTopic=evt.device.getDataValue("color_Cmd")  //  TOD will not work
+            cTopic=evt.device.getDataValue("color_Cmd")  //  TODO will not work
             mqtt.publishMsg (cTopic,state,1,true)
         }
 
@@ -4166,8 +4167,9 @@ def LookupManual(evt) {
 			        
                 device=getChildDevice(LookupID) 
                 devType=device.getTypeName()
-//                log.trace ("Virtual device $device [$devType] found in topicLink ") //+ data.topic + " == "  + LookupID), "ERROR")
+//                log.trace ("Virtual device $device [$devType] found in topicLink ") //+ data.topic + " == "  + LookupID), "INFO")
                 found=true 
+                //atomicState.lastDev="$device [$evt.value]"
                 if (devType.contains("Sensor")){
                     log ("Virtual Sensor match for $device","TRACE")
                     sensorAction (device, devType,evt.value)   
@@ -4259,7 +4261,9 @@ def LookupManual(evt) {
                   }                                
                } 
             }
+        
     }
+    
 }
     
 //This one should become redundant once topicLink is populated correctly  
@@ -4542,9 +4546,7 @@ if (devType=="manual" && !onoffdevice && !dimdevice) {    // we are going to hav
 				//if (OnValues.contains(evt.value.toLowerCase()))
                 if (OnValues.contains(evt.value) )device.on()
                 else if (OffValues.contains(evt.value)) device.off()
-				else log ("Unknown state value " + evt.value +" - need to add in device settings (or lookup)","WARN")
-                atomicState.lastDev="$device [$evt.value]"
-                
+				else log ("Unknown state value " + evt.value +" - need to add in device settings (or lookup)","WARN") 
 				}
 			}
 		}
@@ -5073,7 +5075,7 @@ def sensorUOM(evt) {
 def cmdEvent (evt) {  // 'set' command from homie for a Hubitat or manual device via Hubitat basic 
 	// TODO This has value and data transposed in the two versions for discovered and adhoc .. tidy up
 	def data = parseJson(evt.data)
-	log ("MQTT set command received for " + evt.value + " " + data.cmd + " " + data.state,"INFO")
+	log ("MQTT set command received for " + evt.value + " " + data.cmd + " " + data.state,"DEBUG") 
 	found=false
     normName=evt.value
     matchName=evt.value
@@ -5096,6 +5098,7 @@ def cmdEvent (evt) {  // 'set' command from homie for a Hubitat or manual device
             device=it
             found=true
             log ("Found device: ID: ${it.id}, Label: ${it.label}, DisplayName: ${it.displayName}, Name: ${it.name}","DEBUG")
+            atomicState.lastDev="$device [$data.state]"
         }          
     }
     log ("${data.cmd} received ${data.state}","DEBUG")
