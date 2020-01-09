@@ -2359,7 +2359,7 @@ def subscribeHomieStateTopics() {
 def subscribeHomieNameTopics() {
 	log ("Adding homie name subscription topics ", "INFO")  // This is the last homie subscription
 	mqtt.subscribeTopic('homie/'+atomicState.homie+'/+/$name')
-    mqtt.subscribeTopic ('homie/'+atomicState.homie+'/$fw/name')  //using this as it returns after all other messages have arrived so know done
+    mqtt.subscribeTopic ('homie/'+atomicState.normHubName+'/$fw/name')  //using this as it returns after all other messages have arrived so know done
     // removed immediate unsubscribe
 }
 
@@ -2373,7 +2373,7 @@ def start_HADiscovery(evt){
 	//mqtt.subscribeTopic('homie/'+atomicState.homie+'/+/$properties')   // Not subscribed currently
 	mqtt.unsubscribeTopic('homie/'+atomicState.homie+'/+/$type')     
     }
-    //mqtt.subscribeTopic ('homie/'+atomicState.homie+'/$fw/name')
+    //mqtt.subscribeTopic ('homie/'+atomicState.normHubName+'/$fw/name')
     log ("Starting HA Discovery","INFO")
     	if(settings?.HAStatestream){
 		log ("HA stateStream enabled", "INFO")
@@ -2386,7 +2386,7 @@ def start_HADiscovery(evt){
 	}
     else {
         log ("Skipping HA stateStream MQTT discovery", "INFO")
-         mqtt.subscribeTopic ('homie/'+atomicState.homie+'/$fw/version')  //using this to as it returns after all other messages have arrived so know done
+         mqtt.subscribeTopic ('homie/'+atomicState.normHubName+'/$fw/version')  //using this to as it returns after all other messages have arrived so know done
     }
     }
     else if(evt.value=="complete") { 
@@ -2418,7 +2418,7 @@ def subscribeHADevices() {  // ToDo - these might benefit from pacing
     mqtt.subscribeTopic(atomicState.HA+'/device_tracker/+/friendly_name')
     mqtt.subscribeTopic(atomicState.HA+'/climate/+/friendly_name')
     mqtt.subscribeTopic(atomicState.HA+'/lock/+/friendly_name')
-    mqtt.subscribeTopic ('homie/'+atomicState.homie+'/$fw/client') // this will run when all the friendly names have arrived
+    mqtt.subscribeTopic ('homie/'+atomicState.normHubName+'/$fw/client') // this will run when all the friendly names have arrived
         
     // Currently not discovering these :   
     //mqtt.subscribeTopic(atomicState.HA+'/automation/+/friendly_name')
@@ -2485,7 +2485,7 @@ def subscribeHADeviceEvents() {// This runs 10 secs after above currently
     mqtt.subscribeTopic(atomicState.HA+'/person/+/state')
     mqtt.subscribeTopic(atomicState.HA+'/cover/+/state')
     mqtt.subscribeTopic(atomicState.HA+'/cover/+/current_position')
-    mqtt.subscribeTopic ('homie/'+atomicState.homie+'/$fw/version')  //using this to as it returns after all other messages have arrived so know done
+    mqtt.subscribeTopic ('homie/'+atomicState.normHubName+'/$fw/version')  //using this to as it returns after all other messages have arrived so know done
     // Currently not handling state updates for these :   
     //mqtt.subscribeTopic(atomicState.HA+'/automation/+/state')
     //mqtt.subscribeTopic(atomicState.HA+'/climate/+/state')
