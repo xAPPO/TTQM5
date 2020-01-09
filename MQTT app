@@ -956,12 +956,12 @@ def initialize() {
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$state','init',1,true,settings?.minHomie)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$homie','3.0.1',1,true,settings?.minHomie) 
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$implementation','groovy:uk.co.ukusa.mqtt',1,true,settings?.minHomie)
-		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$fw/version','5 pre 5n',1,true)
+		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$fw/version','5 pre 5o',1,true)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$fw/name','alpha',1,true)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$name',settings?.hubName,1,true)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$mac','BB:AA:DD:AA:55:55',1,true,settings?.minHomie)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$localip','1.2.3.4',1,true,settings?.minHomie)
-		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$implementation/version','alpha5 pre 5n',1,true)
+		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$implementation/version','alpha5 pre 5o',1,true)
         if (modes) currentMode()
 	}
 	mqtt.setStateVar("logLevel",determineLogLevel(settings?.logging ?: "INFO"))
@@ -1263,6 +1263,10 @@ def mqttSubscribes() {  //events from MQTT driver
     subscribe (mqtt,"endDiscovery",devSummary)
 
     subscribe (mqtt,"unsubscribeFriendly",unsubscribeHADevices)
+}
+
+def lockEvent(evt) {
+        log.warn "Lock Event Handler is AWOL"
 }
 
 
@@ -1990,6 +1994,13 @@ private determineLogLevel(data) {
 		case "DISABLED":
 		    return 5
 			break
+        case "RED":
+        case "BLUE":
+        case "GREEN":
+        case "YELLOW":
+        case "ORANGE":
+            return 6
+            break
         default:
             return 1
     }
@@ -2039,7 +2050,7 @@ def HADiscoveryAdvertise (name, type="none", category="none", id='0', payON="tru
         pID=''
     String ID = "${id}"
     if (ID != '0') {
-        pID= ',"device": {"identifiers": "HE_'+ ID + '","name": "'+name+ '","sw_version":"alpha 5 pre 5l","model":"'+"${atomicState.normHubName}"+'","manufacturer":"Hubitat"}'  // TODO Investigate if this can work
+        pID= ',"device": {"identifiers": "HE_'+ ID + '","name": "'+name+ '","sw_version":"alpha 5 pre 5o","model":"'+"${atomicState.normHubName}"+'","manufacturer":"Hubitat"}'  // TODO Investigate if this can work
     }   
 		pON = ',"payload_on":"true"'  //default for booleans in homie
 		pOFF = ',"payload_off":"false"'
@@ -2271,6 +2282,21 @@ def log(data, type) {
                 break
 			case "DISABLED":
 			    break
+            case "BLUE":
+                log.debug "<b style = 'color: blue'>${data}</b>"
+                break
+            case "RED":
+                log.debug "<b style = 'color: red'>${data}</b>"
+                break
+            case "ORANGE":
+                log.debug "<b style = 'color: orange'>${data}</b>"
+                break
+            case "GREEN":
+                log.debug "<b style = 'color: green'>${data}</b>"
+                break
+            case "YELLOW":
+                log.debug "<b style = 'color: yellow'>${data}</b>"
+                break
             default:
                 log.error "MQTT: -- ${device.label} -- Invalid Log Setting"
         }
@@ -2316,7 +2342,7 @@ def subscribeSonoffTopic() {
 }
 
 def subscribeHomieTopic() {
-    log ("Starting homie Discovery", "INFO")
+    log ("<b style = 'color: blue'>Starting homie Discovery</b>", "INFO")
     atomicState.progress = now()
 	log ("Adding homie property and node subscription topics for " + atomicState.homie, "INFO")
 	mqtt.subscribeTopic('homie/'+atomicState.homie+'/$nodes')
@@ -2374,7 +2400,7 @@ def start_HADiscovery(evt){
 	mqtt.unsubscribeTopic('homie/'+atomicState.homie+'/+/$type')     
     }
     //mqtt.subscribeTopic ('homie/'+atomicState.normHubName+'/$fw/name')
-    log ("Starting HA Discovery","INFO")
+    log ("<b style = 'color: blue'>Starting HA Discovery</b>","INFO")
     	if(settings?.HAStatestream){
 		log ("HA stateStream enabled", "INFO")
         delay=0
@@ -2390,7 +2416,7 @@ def start_HADiscovery(evt){
     }
     }
     else if(evt.value=="complete") { 
-        if (!settings?.homieDiscovery)  log ("<b style = 'color: blue'>============   HA Discovery has completed   =============</b>","INFO")
+        if(settings?.HAStatestream)  log ("<b style = 'color: blue'>============   HA Discovery has completed   =============</b>","INFO")
         devSummary()
     }
     
@@ -2403,7 +2429,7 @@ def start_HADiscovery(evt){
     
     
 
-def subscribeHADevices() {  // ToDo - these might benefit from pacing
+def subscribeHADevices(evt=null) {  // ToDo - these might benefit from pacing
 	log ("Adding HA switches, lights and sensors friendly names topics ", "INFO")
 	mqtt.subscribeTopic(atomicState.HA+'/switch/+/friendly_name')
 	mqtt.subscribeTopic(atomicState.HA+'/light/+/friendly_name')
@@ -2515,11 +2541,21 @@ def switched(evt, name=null, type=null, state=null,id=0) {
 		state=evt.value
 		xName=evt.name
         // need to determine if MQTT caused this or HE
-        if (atomicState.lastDev== "$name [$state]")   atomicState.lastDev=''
+        if (atomicState.lastDev== "$name [$state]") atomicState.lastDev=''
         else {
-            cTopic=evt.device.getDataValue("switch_Cmd")
-            mqtt.publishMsg (cTopic,state,1,true)
-        }
+            dType = device.getTypeName()
+            if (dType.startsWith("Virtual")) // only allow commands to MQTT from virtuals
+            {
+                cMQTT=device.getDataValue("mqtt")
+                if (cMQTT=="enabled") {
+                    cTopic=device.getDataValue("switch_Cmd") 
+                    if(cTopic!=null) {
+                        log ("Sending command to MQTT $cTopic","INFO")
+                        mqtt.publishMsg (cTopic,state,1,true)
+                    }
+                }
+            }
+	    }
 	}   
 	else 
 	{
@@ -2566,11 +2602,21 @@ def switchedDim(evt, name=null, type=null, state=null,id=0) {  // why do we pass
 		state=evt.value
 		xName=evt.name
 		log("Device is SwitchedDim ${state}  ${name} ${xName}", "WARN")
-        if (atomicState.lastDev== "$name [$state]")   atomicState.lastDev=''
+        if (atomicState.lastDev== "$name [$state]") atomicState.lastDev=''
         else {
-            cTopic=evt.device.getDataValue("switch_Cmd")
-            mqtt.publishMsg (cTopic,state,1,true)
-        }
+            dType = device.getTypeName()
+            if (dType.startsWith("Virtual")) // only allow commands to MQTT from virtuals
+            {
+                cMQTT=device.getDataValue("mqtt")
+                if (cMQTT=="enabled") {
+                    cTopic=device.getDataValue("switch_Cmd") 
+                    if(cTopic!=null) {
+                        log ("Sending command to MQTT $cTopic","INFO")
+                        mqtt.publishMsg (cTopic,state,1,true)
+                    }
+                }
+            }
+	    }
 
 	} 
 	else 
@@ -2619,11 +2665,21 @@ def dimmed(evt, name=null, type=null, state=null,id=0) {
 		state=evt.value
 		xName=evt.name
 		log ("Device dimmed ${state}  ${name}", "DEBUG")
-        if (atomicState.lastDev== "$name [$state]")   atomicState.lastDev=''
+        if (atomicState.lastDev== "$name [$state]") atomicState.lastDev=''
         else {
-            cTopic=evt.device.getDataValue("level_Cmd")
-            mqtt.publishMsg (cTopic,state,1,true)
-        }
+            dType = device.getTypeName()
+            if (dType.startsWith("Virtual")) // only allow commands to MQTT from virtuals
+            {
+                cMQTT=device.getDataValue("mqtt")
+                if (cMQTT=="enabled") {
+                    cTopic=device.getDataValue("level_Cmd") 
+                    if(cTopic!=null) {
+                        log ("Sending command to MQTT $cTopic","INFO")
+                        mqtt.publishMsg (cTopic,state,1,true)
+                    }
+                }
+            }
+	    }
 
 	} 
 	else {
@@ -3449,19 +3505,28 @@ def sensorDevices(evt, name=null, type=null, state=null, id=0, multiple=false) {
 def colourDevices(evt, name=null,type=null, state=null, id=0) {	
 	if (evt!=null)
 	{
+        device=evt.getDevice()
         name=evt.displayName
 		state=evt.value
 		xName=evt.name
 		xType=evt.name  // this is the attribute name
 		log ("Got a colour event " + evt.name + " " + evt.value, "INFO")
-        if (atomicState.lastDev== "$name [$state]")   atomicState.lastDev=''
-        // devType=device.getTypeName()
+        if (atomicState.lastDev== "$name [$state]") atomicState.lastDev=''
         else {
-            cTopic=evt.device.getDataValue("color_Cmd")  //  TODO will not work
-            mqtt.publishMsg (cTopic,state,1,true)
-        }
-
-	} 
+            dType = device.getTypeName()
+            if (dType.startsWith("Virtual")) // only allow commands to MQTT from virtuals
+            {
+                cMQTT=device.getDataValue("mqtt")
+                if (cMQTT=="enabled") {
+                    cTopic=device.getDataValue("color_Cmd") 
+                    if(cTopic!=null) {
+                        log ("Sending command to MQTT $cTopic","INFO")
+                        mqtt.publishMsg (cTopic,state,1,true)
+                    }
+                }
+            }
+	    }
+    }
 	else {
 		xName=name
 		xType=type
@@ -3551,8 +3616,10 @@ def colourDevices(evt, name=null,type=null, state=null, id=0) {
 				mqtt.publishMsg (sTopic+'/'+category+'/v',state.toString(),1,settings?.homieStatesPersist,settings?.minHomie)  // TODO Check is this right  // unnecessary ?
                 theDevice=evt.getDevice()
                 hueNum=theDevice.currentValue("hue")
+                if (hueNum == null) hueNum = 0
                 LHueNum = (hueNum*3.6).toInteger()
                 satNum=theDevice.currentValue("saturation")
+                if (satNum == null) satNum = 0
                 //valNum=state.toInteger()
                 valNum=theDevice.currentValue("level")
                 mqtt.publishMsg (sTopic+'/dim',valNum.toString())
@@ -6183,7 +6250,7 @@ def advertiseChild(){
 	//HADiscoveryAdvertise()
 }
 
-def devSummary() {
+def devSummary(evt=null) {
 	log ("==================================================", "INFO")
     nodes=atomicState.nodes.split(',')
 
