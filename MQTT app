@@ -956,12 +956,12 @@ def initialize() {
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$state','init',1,true,settings?.minHomie)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$homie','3.0.1',1,true,settings?.minHomie) 
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$implementation','groovy:uk.co.ukusa.mqtt',1,true,settings?.minHomie)
-		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$fw/version','5 pre 5o',1,true)
+		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$fw/version','5 pre 5p',1,true)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$fw/name','alpha',1,true)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$name',settings?.hubName,1,true)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$mac','BB:AA:DD:AA:55:55',1,true,settings?.minHomie)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$localip','1.2.3.4',1,true,settings?.minHomie)
-		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$implementation/version','alpha5 pre 5o',1,true)
+		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$implementation/version','alpha5 pre 5p',1,true)
         if (modes) currentMode()
 	}
 	mqtt.setStateVar("logLevel",determineLogLevel(settings?.logging ?: "INFO"))
@@ -1721,8 +1721,8 @@ def synchDevices(evt) {
 			myName = it.displayName
 			switchedDim(null, myName,"onoff", it.currentSwitch,it.id)
 			dimmed(null, myName, "dim", it.currentLevel,it.id)
-            hsv=[it.currentHue, it.currentSaturation, it.currentLevel]
-            colourDevices(null,myName,"hsv",hsv,it.id) // not useful as always #FFFFFF - what does this call provide additionally to MQTTRGB above ?
+//            hsv=[it.currentHue, it.currentSaturation, it.currentLevel]
+//            colourDevices(null,myName,"hsv",hsv,it.id) // not useful as always #FFFFFF - what does this call provide additionally to MQTTRGB above ?
             colorTemp=it.currentColorTemperature
             colourDevices(null,myName,"colorTemperature",colorTemp,it.id) 
             try {
@@ -1731,12 +1731,13 @@ def synchDevices(evt) {
             }
             catch (e) {
             }
-            try {
-                colorMode=it.currentColorMode
-                colourDevices(null,myName,"cMode",colorMode,it.id)
-            }
-            catch (e) {
-            }
+           // try {
+           //     colorMode=it.currentColorMode // is always CT
+           //     if colorMode==null)
+                colourDevices(null,myName,"cMode","CT",it.id)
+           // }
+           // catch (e) {
+           // }
             count++
 		}
 	}
@@ -2050,7 +2051,7 @@ def HADiscoveryAdvertise (name, type="none", category="none", id='0', payON="tru
         pID=''
     String ID = "${id}"
     if (ID != '0') {
-        pID= ',"device": {"identifiers": "HE_'+ ID + '","name": "'+name+ '","sw_version":"alpha 5 pre 5o","model":"'+"${atomicState.normHubName}"+'","manufacturer":"Hubitat"}'  // TODO Investigate if this can work
+        pID= ',"device": {"identifiers": "HE_'+ ID + '","name": "'+name+ '","sw_version":"alpha 5 pre 5p","model":"'+"${atomicState.normHubName}"+'","manufacturer":"Hubitat"}'  // TODO Investigate if this can work
     }   
 		pON = ',"payload_on":"true"'  //default for booleans in homie
 		pOFF = ',"payload_off":"false"'
@@ -3562,6 +3563,7 @@ def colourDevices(evt, name=null,type=null, state=null, id=0) {
 		
 			else if (xType=='colorTemperature'){
 				category='color-temperature'
+                mqtt.publishMsg (sTopic+'/$type',"CT light",1,true,settings?.minHomie)
 				mqtt.publishMsg (sTopic+'/'+category+'/$datatype',"integer",1,true,settings?.minHomie)
 				mqtt.publishMsg (sTopic+'/'+category+'/$unit','Kelvin',1,true,settings?.minHomie)
 				mqtt.publishMsg (sTopic+'/'+category+'/$format','1500:8000',1,true,settings?.minHomie)
@@ -3653,7 +3655,8 @@ def colourDevices(evt, name=null,type=null, state=null, id=0) {
 		else if (xType=="hsv") {
 				category='color'
 // TODO CHECKRGB			
-				mqtt.publishMsg (sTopic+'/'+category+'/$datatype',"color",1,true,settings?.minHomie)
+				mqtt.publishMsg (sTopic+'/$type',"RGBT light",1,true,settings?.minHomie)
+                mqtt.publishMsg (sTopic+'/'+category+'/$datatype',"color",1,true,settings?.minHomie)
 				mqtt.publishMsg (sTopic+'/'+category+'/$unit','hsv',1,true,settings?.minHomie)
 				mqtt.publishMsg (sTopic+'/'+category+'/$format','hsv',1,true,settings?.minHomie)
 				mqtt.publishMsg (sTopic+'/'+category+'/$settable','true',1,true,settings?.minHomie)
@@ -3715,6 +3718,7 @@ def colourDevices(evt, name=null,type=null, state=null, id=0) {
 		else log ("Received a new colour event ${xType} from ${name}","TRACE")
         if (xType=="cMode") {
             category='color-mode' // this is a temporary kludge TODO better
+            //mqtt.publishMsg (sTopic+'/'+category,state.toString(),1,true,settings?.minHomie)
             mqtt.publishMsg (sTopic+'/'+category+'/$datatype','enum',1,true,settings?.minHomie)
 			mqtt.publishMsg (sTopic+'/'+category+'/$settable','false',1,true,settings?.minHomie)
             mqtt.publishMsg (sTopic+'/'+category+'/$format','[CT,RGB]',1,true,settings?.minHomie)
@@ -3729,7 +3733,7 @@ def colourDevices(evt, name=null,type=null, state=null, id=0) {
         if (category=="unknown") log ("Need to handle ${xType}  - for ${name.toString()} in RGB colour", "WARN")
             addProperty(sTopic,category)
 			mqtt.publishMsg (sTopic+'/$name',name.toString(),1,true) 
-			mqtt.publishMsg (sTopic+'/$type',"RGBT light",1,true,settings?.minHomie)   
+//			mqtt.publishMsg (sTopic+'/$type',"RGBT light",1,true,settings?.minHomie)   
 		 	mqtt.publishMsg (sTopic+'/'+category+'/$name',name.toString(),1,true,settings?.minHomie)
             //  mqtt.publishMsg (sTopic+'/'+category+'/xType',xType.toString(),1,true,settings?.minHomie)
 			mqtt.publishMsg (sTopic+'/'+category+'/$retained',(settings?.homieStatesPersist).toString(),1,true,settings?.minHomie)
@@ -3739,14 +3743,16 @@ def colourDevices(evt, name=null,type=null, state=null, id=0) {
             if ("${category}" == 'color') {  // hue was overwriting color map - need to check why I even do next publish TODO BUG ? 
                 log ("Hue value update blocked","DEBUG")
                  }
-            else mqtt.publishMsg (sTopic+'/'+category,state.toString(),1,settings?.homieStatesPersist)
+            else if (state!=null) mqtt.publishMsg (sTopic+'/'+category,state.toString(),1,settings?.homieStatesPersist) 
+            else log ("State was null so didn't update MQTT for $sTopic","WARN")
+            
             
 		//	mqtt.publishMsg (sTopic+'/color/r',255,1,settings?.homieStatesPersist)  /? TODO What is this for ? Red ? but no g or b ??
 		
 			//{"h":216,"s":100,"v":67}
 	//TODO BUG refine this by checking name matches (if use this)
 	//	mqtt.publishMsg (sTopic+'/color',"${extractInt(atomicState.hue)},${extractInt(atomicState.sat)},${extractInt(atomicState.lev)}",1,settings?.homieStatesPersist)
-	    mqtt.publishMsg (sTopic+'/color/$format','hsv',1,true,settings?.minHomie)
+//    mqtt.publishMsg (sTopic+'/color/$format','hsv',1,true,settings?.minHomie)
 	//	mqtt.publishMsg (sTopic+'/color/hsv','{"h":'+extractInt(atomicState.hue)+',"s":'+extractInt(atomicState.sat)+',"v":'+extractInt(atomicState.lev)+'}',1,settings?.homieStatesPersist)
 	}
     checkNodes(10, name) 
