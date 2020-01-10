@@ -2283,19 +2283,19 @@ def log(data, type) {
 			case "DISABLED":
 			    break
             case "BLUE":
-                log.debug "<b style = 'color: blue'>${data}</b>"
+                log.debug "<font color='blue'>${data}</font>"
                 break
             case "RED":
-                log.debug "<b style = 'color: red'>${data}</b>"
+                log.debug "<font color='red'>${data}</font>"
                 break
             case "ORANGE":
-                log.debug "<b style = 'color: orange'>${data}</b>"
+                log.debug "<font color='orange'>${data}</font>"
                 break
             case "GREEN":
-                log.debug "<b style = 'color: green'>${data}</b>"
+                log.debug "<font color='green'>${data}</font>"
                 break
             case "YELLOW":
-                log.debug "<b style = 'color: yellow'>${data}</b>"
+                log.debug "<font color='yellow'>${data}</font>"
                 break
             default:
                 log.error "MQTT: -- ${device.label} -- Invalid Log Setting"
