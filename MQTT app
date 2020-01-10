@@ -956,12 +956,12 @@ def initialize() {
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$state','init',1,true,settings?.minHomie)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$homie','3.0.1',1,true,settings?.minHomie) 
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$implementation','groovy:uk.co.ukusa.mqtt',1,true,settings?.minHomie)
-		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$fw/version','5 pre 5r',1,true)
+		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$fw/version','5 pre 5s',1,true)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$fw/name','alpha',1,true)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$name',settings?.hubName,1,true)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$mac','BB:AA:DD:AA:55:55',1,true,settings?.minHomie)
 		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$localip','1.2.3.4',1,true,settings?.minHomie)
-		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$implementation/version','alpha5 pre 5r',1,true)
+		mqtt.publishMsg ("homie/${atomicState.normHubName}/" +'$implementation/version','alpha5 pre 5s',1,true)
         if (modes) currentMode()
 	}
 	mqtt.setStateVar("logLevel",determineLogLevel(settings?.logging ?: "INFO"))
@@ -2050,7 +2050,7 @@ def HADiscoveryAdvertise (name, type="none", category="none", id='0', payON="tru
         pID=''
     String ID = "${id}"
     if (ID != '0') {
-        pID= ',"device": {"identifiers": "HE_'+ ID + '","name": "'+name+ '","sw_version":"alpha 5 pre 5r","model":"'+"${atomicState.normHubName}"+'","manufacturer":"Hubitat"}'  // TODO Investigate if this can work
+        pID= ',"device": {"identifiers": "HE_'+ ID + '","name": "'+name+ '","sw_version":"alpha 5 pre 5s","model":"'+"${atomicState.normHubName}"+'","manufacturer":"Hubitat"}'  // TODO Investigate if this can work
     }   
 		pON = ',"payload_on":"true"'  //default for booleans in homie
 		pOFF = ',"payload_off":"false"'
@@ -5427,41 +5427,50 @@ def cmdEvent (evt) {  // 'set' command from homie for a Hubitat or manual device
                     else
                     {
                     colour=data.payload
-                        try {
-                        hue = data.payload[0].toInteger()
-                        float Rtemp= Float.parseFloat(data.payload[0])/3.6
-					    int hue = Math.round (Rtemp)  // 0-360
-                        if (hue>100) hue=100
-                        else if (hue<0) hue=0
-                        //it.setHue(hue)  // 0-100
-                        int sat = data.payload[1].toInteger()
-                        if (sat>100) sat=100
-                        else if (sat<0) sat=0
-                        int val = data.payload[2].toInteger()
-                        if (val>100) val=100
-                        else if (val<0) val=0
-                        log ("Color data is $data.payload   hue:$hue    sat:$sat    value:$val","GREEN")
-/*
-                   // int sat = hue
-					if (data.payload.size()>1) {
-						Rtemp= Float.parseFloat(data.payload[1])/1.0
-						sat = Math.round (Rtemp)
-                        //pauseExecution(5000)  //   really !!!! TODO Look at why I did this
-                        //it.setSaturation(sat)  // 0-100
-					}
-*/					
-                        //it.setHue(hue)
-                        HSL=[:]                 
-                        HSL.put('hue',hue)
-                        HSL.put('saturation',sat)
-                        HSL.put('level',val)
-                        log ("HSL set value is $HSL","INFO")
-                        it.setColor(HSL)
+                        try {      
+                        hue=-1
+                        if (data.payload[0] != null) {
+                            float h = Float.parseFloat(data.payload[0])
+                            h = (h/3.6) + 0.5
+                            hue = (int) (h)
+                            if (hue>100) hue=100
+                            else if (hue<0) hue=0                            
+                        }
+                        sat=-1
+                        if (data.payload[1] != null) {
+                            float s = Float.parseFloat(data.payload[1]) + 0.5
+                            sat = (int) (s)
+                            if (sat>100) sat=100
+                            else if (sat<0) sat=0
+                        }
+                        if (data.payload[2] != null) {
+                            float v = Float.parseFloat(data.payload[1]) + 0.5
+                            val = (int) (v)
+                            if (val>100) val=100
+                            else if (val<0) val=0
+                        }
+                        else val=-1
+                            
+                        log ("Color data is $data.payload   hue:$hue    sat:$sat    value:$val","ERROR")
+                            
+                        if (val==-1) { // from HA - has no 'level'
+                            if (hue>=0) it.setHue(hue)  
+                            if (sat>=0) it.setSaturation(sat)  
+                        }
+                        else if ((hue>=0)&&(sat>=0)&&(val>=0)) //all present
+                        {
+                            HSL=[:]                 
+                            HSL.put('hue',hue)
+                            HSL.put('saturation',sat)
+                            HSL.put('level',val)
+                            log ("HSL set value is $HSL","INFO")
+                            it.setColor(HSL)
+                        }    
                         }
                         catch (e) {
                             log ("HSV colour set error format is h,s,v :  "+e ,"ERROR")
                         }
-                      //it.setHue(hue)  // 0-100
+ 
                     }
 
 				}
