@@ -71,7 +71,7 @@ def initialize() {
     state.maxComplete=0
 
     
-    version="alpha5 pre 5c"
+    version="alpha5 RC"
     if (state.delay==null) state.delay=250 // inter state.maxImmediate event pacing in mS
 
 //    sendEvent (name: "Status", value: "disconnected" , isStateChange: true)
@@ -181,11 +181,19 @@ void adviseStatus() {
 }
 
 def publishMsg(String topic, String payload, int qos, String retained) {  // overload for RM compatibility
+    log.error "HERE"
     publishMsg(topic, payload, qos, retained.toBoolean())
 }
 
-def publishMsg(String topic, String payload,int qos = 1, boolean retained = false, boolean extra = true ) {
-    if (extra == false) return //  this reduces the messages posted to homie topic to bare minimum although this will no longer be homie compliant
+def publishMsg(String topic, String payload,int qos = 1, boolean retained = false, boolean suppress = false ) {
+    if (suppress == true){
+        if (state.normHubName=="development") log.trace ("Suppressed: $topic = $payload")
+        return //  this reduces the messages posted to homie topic to bare minimum although this will no longer be homie compliant
+    } 
+    if (topic.startsWith("Hubitat/"+state.hubName+"/")) {
+        return  //blocks Hubitat topics - remove calls in app later
+    }
+                         
     if (payload==null) {
         log("Publish payload is null for topic ${topic}","ERROR")
         return
@@ -209,7 +217,7 @@ def publishMsg(String topic, String payload,int qos = 1, boolean retained = fals
 
 
 def subscribeTopic (String s) {
-	log ("MQTT subscribing to: " + s, "DEBUG")
+	log ("MQTT subscribing to: " + s, "INFO")
     if (state.connected==true){
         interfaces.mqtt.subscribe(s,1)
          sendEvent (name: "Subscribes", value: state.subs++)   
@@ -297,7 +305,7 @@ def notfoundevt(String s){
 }
 
 def bufferEmpty(i){
-    log  ("MQTT message queue idle","ERROR")
+    log  ("MQTT message queue idle","INFO")
 }
 
 // Key method Handles all the data back from MQTT subscriptions
@@ -744,7 +752,7 @@ def parse(String description) {
             if (topic[3]=='name') {
                 //log ("<b style = 'color: blue'>============ homie Discovery has completed ============</b>","INFO")
 
-                log  ("============ Asking HA Discovery to start  ============","DEBUG")
+                log  ("============ Asking HA Discovery to start  ============","INFO")
                 //unsubscribeTopic ('homie/development/$fw/name')
                 
                // def evt99 = createEvent (name: "startHADiscovery", value: "true", data: [seq: sequence], isStateChange: true)
